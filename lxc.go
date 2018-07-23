@@ -29,3 +29,12 @@ func (l *lxc) getLxc(db *sqlx.DB) error {
 	}
 	return nil
 }
+
+func (l *lxc) insertLxc(db *sqlx.DB) error {
+	_, err := db.NamedExec("INSERT INTO lxc (id, lxd_id, name, type, alias, address, description, is_deployed) VALUES (:id, :lxd_id, :name, :type, :alias, :address, :description, :is_deployed)", l)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

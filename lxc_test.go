@@ -50,3 +50,19 @@ func (suite *LxcSuite) TestGetLxcSuccessful() {
 	suite.NoError(err, "They should be no error")
 
 }
+
+func (suite *LxcSuite) TestInsertLxcSuccessful() {
+	testLxc := lxc{
+		ID:          "very-unique-lxc-uuid",
+		LxdID:       "very-unique-lxd-uuid",
+		Name:        "test-lxc-1",
+		Type:        "image",
+		Alias:       "16.04",
+		Address:     "",
+		Description: "",
+		IsDeployed:  0,
+	}
+
+	err := testLxc.insertLxc(s.DB)
+	suite.NoError(err, "They should be no error")
+}
