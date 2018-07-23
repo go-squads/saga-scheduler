@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 )
 
-var s *scheduler
+var s scheduler
 
 type LxcSuite struct {
 	suite.Suite
@@ -18,20 +17,36 @@ func TestLxcSuite(t *testing.T) {
 }
 
 func (suite *LxcSuite) SetupSuite() {
-	err := s.initialize("postgres", "", "test", "127.0.0.1", "5432", "require")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	s = scheduler{}
+	err := s.initialize("postgres", "postgres", "scheduler", "localhost", "5433", "disable")
+	suite.NoError(err, "They should be no error")
+
+	clearQuery := `DELETE FROM operation;
+	DELETE FROM lxc;
+	DELETE FROM lxd;`
+
+	_, err = s.DB.Exec(clearQuery)
+	suite.NoError(err, "They should be no error")
+
+	_, err = s.DB.Exec("INSERT INTO lxd (id, name, address) VALUES ('very-unique-lxd-uuid', 'test-lxd', 'test.gojek.com');")
+	suite.NoError(err, "They should be no error")
 }
 
 func (suite *LxcSuite) TearDownSuite() {
+	clearQuery := `DELETE FROM operation;
+	DELETE FROM lxc;
+	DELETE FROM lxd;`
 
+	_, err := s.DB.Exec(clearQuery)
+	suite.NoError(err, "They should be no error")
 }
 
 func (suite *LxcSuite) TestGetLxcSuccessful() {
-	var testLxc lxc
-	testLxc.ID = "1"
+	testLxc := lxc{
+		ID: "1",
+	}
 
 	err := testLxc.getLxc(s.DB)
 	suite.NoError(err, "They should be no error")
+
 }

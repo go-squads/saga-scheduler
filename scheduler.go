@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 type scheduler struct {
@@ -14,8 +15,6 @@ type scheduler struct {
 
 func (s *scheduler) initialize(user, password, dbname, host, port, sslmode string) error {
 	connectionString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s", user, password, dbname, host, port, sslmode)
-
-	fmt.Println(connectionString)
 	var err error
 	s.DB, err = sqlx.Connect("postgres", connectionString)
 	if err != nil {
