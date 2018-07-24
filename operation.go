@@ -26,3 +26,12 @@ func (op *operation) getOperation(db *sqlx.DB) error {
 	}
 	return nil
 }
+
+func (op *operation) insertOperation(db *sqlx.DB) error {
+	_, err := db.NamedExec("INSERT INTO operation (id, lxc_id, status, status_code, description) VALUES (:id, :lxc_id, :status, :status_code, :description)", op)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

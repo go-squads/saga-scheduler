@@ -52,3 +52,16 @@ func (suite *OperationSuite) TestGetOperationSuccessful() {
 	suite.NoError(err, "They should be no error")
 
 }
+
+func (suite *OperationSuite) TestInsertOperationSuccessful() {
+	testOperation := operation{
+		ID:          "very-unique-operation-uuid",
+		LxcID:       "very-unique-lxc-uuid",
+		Status:      "OK",
+		StatusCode:  200,
+		Description: "",
+	}
+
+	err := testOperation.insertOperation(operationScheduler.DB)
+	suite.NoError(err, "They should be no error")
+}
