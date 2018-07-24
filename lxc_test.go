@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var s scheduler
+var lxcScheduler scheduler
 
 type LxcSuite struct {
 	suite.Suite
@@ -17,18 +17,18 @@ func TestLxcSuite(t *testing.T) {
 }
 
 func (suite *LxcSuite) SetupSuite() {
-	s = scheduler{}
-	err := s.initialize("postgres", "postgres", "scheduler", "localhost", "5433", "disable")
+	lxcScheduler = scheduler{}
+	err := lxcScheduler.initialize("postgres", "postgres", "saga", "localhost", "5432", "disable")
 	suite.NoError(err, "They should be no error")
 
 	clearQuery := `DELETE FROM operation;
 	DELETE FROM lxc;
 	DELETE FROM lxd;`
 
-	_, err = s.DB.Exec(clearQuery)
+	_, err = lxcScheduler.DB.Exec(clearQuery)
 	suite.NoError(err, "They should be no error")
 
-	_, err = s.DB.Exec("INSERT INTO lxd (id, name, address) VALUES ('very-unique-lxd-uuid', 'test-lxd', 'test.gojek.com');")
+	_, err = lxcScheduler.DB.Exec("INSERT INTO lxd (id, name, address) VALUES ('very-unique-lxd-uuid', 'test-lxd', 'test.gojek.com');")
 	suite.NoError(err, "They should be no error")
 }
 
@@ -37,7 +37,7 @@ func (suite *LxcSuite) TearDownSuite() {
 	DELETE FROM lxc;
 	DELETE FROM lxd;`
 
-	_, err := s.DB.Exec(clearQuery)
+	_, err := lxcScheduler.DB.Exec(clearQuery)
 	suite.NoError(err, "They should be no error")
 }
 
@@ -46,7 +46,7 @@ func (suite *LxcSuite) TestGetLxcSuccessful() {
 		ID: "1",
 	}
 
-	err := testLxc.getLxc(s.DB)
+	err := testLxc.getLxc(lxcScheduler.DB)
 	suite.NoError(err, "They should be no error")
 
 }
@@ -63,6 +63,6 @@ func (suite *LxcSuite) TestInsertLxcSuccessful() {
 		IsDeployed:  0,
 	}
 
-	err := testLxc.insertLxc(s.DB)
+	err := testLxc.insertLxc(lxcScheduler.DB)
 	suite.NoError(err, "They should be no error")
 }
