@@ -43,3 +43,15 @@ func (suite *LxdSuite) TestGetLxdSuccessful() {
 	suite.NoError(err, "They should be no error")
 
 }
+
+func (suite *LxdSuite) TestInsertLxdSuccessful() {
+	testLxd := lxd{
+		ID:          "very-unique-lxc-uuid",
+		Name:        "test-lxc-1",
+		Address:     "192.0.0.1",
+		Description: "",
+	}
+
+	err := testLxd.insertLxd(lxdScheduler.DB)
+	suite.NoError(err, "They should be no error")
+}
