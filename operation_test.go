@@ -30,6 +30,7 @@ func (suite *OperationSuite) SetupSuite() {
 
 	_, err = operationScheduler.DB.Exec("INSERT INTO lxd (id, name, address) VALUES ('very-unique-lxd-uuid', 'test-lxd', 'test.gojek.com');")
 	suite.NoError(err, "They should be no error")
+
 	_, err = operationScheduler.DB.Exec("INSERT INTO lxc (id, lxd_id, name, type, alias, is_deployed) VALUES ('very-unique-lxc-uuid','very-unique-lxd-uuid', 'test-lxc-1', 'image', '16.04', 0);")
 	suite.NoError(err, "They should be no error")
 }

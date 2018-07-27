@@ -60,7 +60,7 @@ func (suite *LxcSuite) TestInsertLxcSuccessful() {
 		Alias:       "16.04",
 		Address:     "",
 		Description: "",
-		IsDeployed:  0,
+		IsDeployed:  1,
 	}
 
 	err := testLxc.insertLxc(lxcScheduler.DB)
