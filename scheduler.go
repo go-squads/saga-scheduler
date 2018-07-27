@@ -15,9 +15,10 @@ import (
 )
 
 type scheduler struct {
-	Router *mux.Router
-	DB     *sqlx.DB
-	client client
+	Router    *mux.Router
+	DB        *sqlx.DB
+	client    client
+	metricsDB metricsDB
 }
 
 type createContainerRequestData struct {

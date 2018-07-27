@@ -37,16 +37,13 @@ type scoring struct {
 	storageScore float64
 }
 
-func getMetrics() (*lxd, error) {
-	// TODO :
-	// 1. Call prometheus API
-	// 2. sort by load
-	// 3. return lxd
-	//memResult, err := getMemoryMetrics()
-	return nil, nil
+type metricsDB interface {
+	callMetricAPI(query string) (*promResponse, error)
 }
 
-func callPrometheusAPI(query string) (*promResponse, error) {
+type prometheusMetricsDB struct{}
+
+func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) {
 	prometheusAddress := "http://172.28.128.5:9090/api/v1/query"
 	url := fmt.Sprintf("%s/api/v1/container", prometheusAddress)
 	req, err := http.NewRequest("GET", url, nil)
@@ -80,8 +77,17 @@ func callPrometheusAPI(query string) (*promResponse, error) {
 	return &result, nil
 }
 
-func getMemoryMetrics() (*promResponse, error) {
-	return callPrometheusAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[24h]) + avg_over_time(node_memory_Cached_bytes[24h]) + avg_over_time(node_memory_Buffers_bytes[24h])) / avg_over_time(node_memory_MemTotal_bytes[24h])))")
+func (s *scheduler) getMetrics() (*lxd, error) {
+	// TODO :
+	// 1. Call prometheus API
+	// 2. sort by load
+	// 3. return lxd
+	// memResult, err := getMemoryMetrics()
+	return nil, nil
+}
+
+func (s *scheduler) getMemoryMetrics() (*promResponse, error) {
+	return s.metricsDB.callMetricAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[24h]) + avg_over_time(node_memory_Cached_bytes[24h]) + avg_over_time(node_memory_Buffers_bytes[24h])) / avg_over_time(node_memory_MemTotal_bytes[24h])))")
 }
 
 func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {
