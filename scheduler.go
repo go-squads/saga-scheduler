@@ -29,20 +29,34 @@ type createContainerRequestData struct {
 }
 
 type client interface {
-	executeRequest(req *http.Request) (*http.Response, error)
+	executeOperationRequest(req *http.Request) (*operation, error)
 }
 
 type agentClient struct{}
 
-func (a agentClient) executeRequest(req *http.Request) (*http.Response, error) {
+func (a agentClient) executeOperationRequest(req *http.Request) (*operation, error) {
 	client := &http.Client{
 		Timeout: 10,
 	}
-	resp, err := client.Do(req)
+	response, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-	return resp, nil
+
+	defer response.Body.Close()
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	var op *operation
+
+	err = json.Unmarshal(body, &op)
+	if err != nil {
+		return nil, err
+	}
+
+	return op, nil
 }
 
 func (s *scheduler) initialize(user, password, dbname, host, port, sslmode string) error {
@@ -119,23 +133,7 @@ func (s *scheduler) createNewLxc(data createContainerRequestData, lxdIPAddress s
 		return nil, err
 	}
 
-	response, err := s.client.executeRequest(req)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(body, &op)
-	if err != nil {
-		return nil, err
-	}
-
-	return op, nil
+	return s.client.executeOperationRequest(req)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

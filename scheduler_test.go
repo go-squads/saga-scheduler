@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +19,7 @@ type SchedulerSuite struct {
 
 type testAgentClient struct{}
 
-func (t testAgentClient) executeRequest(req *http.Request) (*http.Response, error) {
+func (t testAgentClient) executeOperationRequest(req *http.Request) (*operation, error) {
 	op := operation{
 		ID:         uuid.New(),
 		LxcID:      "very-unique-lxc-uuid",
@@ -29,13 +27,7 @@ func (t testAgentClient) executeRequest(req *http.Request) (*http.Response, erro
 		StatusCode: 200,
 	}
 
-	payload, _ := json.Marshal(&op)
-
-	resp := http.Response{
-		Body: ioutil.NopCloser(bytes.NewReader(payload)),
-	}
-
-	return &resp, nil
+	return &op, nil
 }
 
 func TestSchedulerSuite(t *testing.T) {
@@ -65,18 +57,13 @@ func (suite *SchedulerSuite) SetupSuite() {
 }
 
 func (suite *SchedulerSuite) TearDownSuite() {
-	// s.DB.Close()
+	clearQuery := `DELETE FROM operation;
+	DELETE FROM lxc;
+	DELETE FROM lxd;`
+
+	_, err := schedulerSuites.DB.Exec(clearQuery)
+	suite.NoError(err, "They should be no error")
 }
-
-// func (suite *SchedulerSuite) TestInitializeSuccessful() {
-// 	err := s.initialize("postgres", "postgres", "saga", "localhost", "5432", "disable")
-// 	suite.NoError(err, "They should be no error")
-// }
-
-// func (suite *SchedulerSuite) TestInitializeFailed() {
-// 	err := s.initialize("postgres", "postgres", "saga", "localhost", "80", "disable")
-// 	suite.Error(err, "They should be error")
-// }
 
 func (suite *SchedulerSuite) TestCreateNewLxcHandlerSuccessful() {
 	payload := []byte(`{"name":"test-container-12","type":"none"}`)
