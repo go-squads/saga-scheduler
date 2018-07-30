@@ -11,12 +11,16 @@ This is the scheduler for allocating new LXC to the LXD automatically based on l
 
 Make sure to set the GOPATH environment variable as stated on Go installation tutorial
 
-## Running the Program
-```
-$ 
-```
-
 ## Running the Tests
 ```
 $ go test
+```
+
+## Installing the Program
+```
+$ go install
+```
+## Running the Program
+```
+$ saga-scheduler
 ```
