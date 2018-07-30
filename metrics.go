@@ -19,14 +19,14 @@ type promResponseData struct {
 	Result     []result `json:"result"`
 }
 
-type metric struct {
-	Instance string `json:"instance"`
-	Job      string `json:"job"`
-}
-
 type result struct {
 	Metric metric        `json:"metric"`
 	Value  []interface{} `json:"value"`
+}
+
+type metric struct {
+	Instance string `json:"instance"`
+	Job      string `json:"job"`
 }
 
 type scoring struct {
