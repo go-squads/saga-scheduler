@@ -126,9 +126,7 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 
 func (s *scheduler) createNewLxc(data createContainerRequestData, lxdIPAddress string) (op *operation, err error) {
 	url := fmt.Sprintf("%s/api/v1/container", lxdIPAddress)
-
 	payload, err := json.Marshal(data)
-
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
 	if err != nil {
 		return nil, err
@@ -143,7 +141,6 @@ func respondWithError(w http.ResponseWriter, code int, message string) {
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, _ := json.Marshal(payload)
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(response)

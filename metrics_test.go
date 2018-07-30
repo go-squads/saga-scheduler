@@ -29,6 +29,7 @@ func TestMetricsSuite(t *testing.T) {
 func (suite *MetricsSuite) SetupSuite() {
 	metricsScheduler = scheduler{}
 	metricsScheduler.metricsDB = testPrometheusMetricsDB{}
+	metricsScheduler.initialize("postgres", "postgres", "saga", "localhost", "5432", "disable")
 	valueSmall = append(valueSmall, 123.456)
 	valueSmall = append(valueSmall, "30.0")
 
@@ -41,7 +42,7 @@ func (suite *MetricsSuite) SetupSuite() {
 			Result: []result{
 				result{
 					Metric: metric{
-						Instance: "Foo",
+						Instance: "192.168.0.1:9090",
 					},
 					Value: valueLarge,
 				},
@@ -62,7 +63,7 @@ func (suite *MetricsSuite) TearDownSuite() {
 
 func (suite *MetricsSuite) TestCalculateMetricsSuccessful() {
 	actual := calculateMetrics(testMemResponse, promResponse{}, promResponse{})
-	suite.Equal("Foo", actual, "They should be equal")
+	suite.Equal("192.168.0.1", actual, "They should be equal")
 }
 
 func (suite *MetricsSuite) TestCalculateMetricsFailed() {
@@ -70,8 +71,14 @@ func (suite *MetricsSuite) TestCalculateMetricsFailed() {
 	suite.NotEqual("Bar", actual, "They should be not equal")
 }
 
-func (suite *MetricsSuite) TestGetMemoryMetricsSuccessful() {
-	actual, err := metricsScheduler.getMemoryMetrics()
+func (suite *MetricsSuite) TestGetFreeMemorySuccessful() {
+	actual, err := metricsScheduler.getFreeMemory()
 	suite.NoError(err, "They should be no error")
 	suite.Equal("success", actual.Status, "They should be equal")
+}
+
+func (suite *MetricsSuite) TestGetLowestLoadLxdInstanceSuccessful() {
+	actual, err := metricsScheduler.getLowestLoadLxdInstance()
+	suite.NoError(err, "They should be no error")
+	suite.Equal("192.168.0.1", actual.Address, "They should be equal")
 }

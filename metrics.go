@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 type promResponse struct {
@@ -44,8 +45,8 @@ type metricsDB interface {
 type prometheusMetricsDB struct{}
 
 func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) {
-	prometheusAddress := "http://172.28.128.5:9090/api/v1/query"
-	url := fmt.Sprintf("%s/api/v1/container", prometheusAddress)
+	prometheusAddress := "172.28.128.5"
+	url := fmt.Sprintf("http://%s:9090/api/v1/query", prometheusAddress)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -68,7 +69,6 @@ func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) 
 	}
 
 	var result promResponse
-
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
@@ -77,16 +77,26 @@ func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) 
 	return &result, nil
 }
 
-func (s *scheduler) getMetrics() (*lxd, error) {
-	// TODO :
-	// 1. Call prometheus API
-	// 2. sort by load
-	// 3. return lxd
-	// memResult, err := getMemoryMetrics()
-	return nil, nil
+func (s *scheduler) getLowestLoadLxdInstance() (*lxd, error) {
+	freeMemory, err := s.getFreeMemory()
+	if err != nil {
+		return nil, err
+	}
+
+	lowestLoadLxdIPAddress := calculateMetrics(*freeMemory, promResponse{}, promResponse{})
+	lxdInstance := lxd{
+		Address: lowestLoadLxdIPAddress,
+	}
+
+	lxdInstance.getLxdByIP(s.DB)
+	if err != nil {
+		return nil, err
+	}
+
+	return &lxdInstance, nil
 }
 
-func (s *scheduler) getMemoryMetrics() (*promResponse, error) {
+func (s *scheduler) getFreeMemory() (*promResponse, error) {
 	return s.metricsDB.callMetricAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[24h]) + avg_over_time(node_memory_Cached_bytes[24h]) + avg_over_time(node_memory_Buffers_bytes[24h])) / avg_over_time(node_memory_MemTotal_bytes[24h])))")
 }
 
@@ -115,7 +125,9 @@ func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {
 	sort.Slice(scores, func(i, j int) bool {
 		return scores[i].totalScore > scores[j].totalScore
 	})
-	return scores[0].address
+
+	ipAddress := strings.Split(scores[0].address, ":")
+	return ipAddress[0]
 }
 
 func calculateTotalScore(s scoring) float64 {
