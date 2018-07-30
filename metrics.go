@@ -109,7 +109,7 @@ func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {
 	}
 
 	for i := 0; i < len(scores); i++ {
-		scores[i].totalScore = calculateScore(scores[i])
+		scores[i].totalScore = calculateTotalScore(scores[i])
 	}
 
 	sort.Slice(scores, func(i, j int) bool {
@@ -118,6 +118,6 @@ func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {
 	return scores[0].address
 }
 
-func calculateScore(s scoring) float64 {
+func calculateTotalScore(s scoring) float64 {
 	return s.cpuScore + s.memScore + s.storageScore
 }
