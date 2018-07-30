@@ -44,6 +44,16 @@ func (suite *LxdSuite) TestGetLxdSuccessful() {
 
 }
 
+func (suite *LxdSuite) TestGetLxdByIPSuccessful() {
+	testLxd := lxd{
+		Address: "1",
+	}
+
+	err := testLxd.getLxd(lxdScheduler.DB)
+	suite.NoError(err, "They should be no error")
+
+}
+
 func (suite *LxdSuite) TestInsertLxdSuccessful() {
 	testLxd := lxd{
 		ID:          "very-unique-lxc-uuid",

@@ -26,6 +26,21 @@ func (l *lxd) getLxd(db *sqlx.DB) error {
 	return nil
 }
 
+func (l *lxd) getLxdByIP(db *sqlx.DB) error {
+	rows, err := db.Queryx("SELECT * FROM lxd WHERE address=$1 LIMIT 1", l.Address)
+	if err != nil {
+		return err
+	}
+
+	if rows.Next() {
+		err = rows.StructScan(&l)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (l *lxd) insertLxd(db *sqlx.DB) error {
 	_, err := db.NamedExec("INSERT INTO lxd (id, name, address, description) VALUES (:id, :name, :address, :description)", l)
 	if err != nil {
