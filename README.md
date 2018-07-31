@@ -8,6 +8,7 @@ This is the scheduler for allocating new LXC to the LXD automatically based on l
 4. gorilla/mux : https://github.com/gorilla/mux
 5. PrometheusDB : https://prometheus.io/download/
 6. PostgreSQL : https://www.postgresql.org/download/
+7. pborman/uuid : github.com/pborman/uuid
 
 Make sure to set the GOPATH environment variable as stated on Go installation tutorial
 
