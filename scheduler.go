@@ -71,7 +71,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router = mux.NewRouter()
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
 	s.client = agentClient{}
-
+	s.metricsDB = prometheusMetricsDB{}
 	return nil
 }
 
