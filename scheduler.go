@@ -132,7 +132,7 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *scheduler) createNewLxc(data createContainerRequestData, lxdIPAddress string) (op *operation, err error) {
-	url := fmt.Sprintf("%s/api/v1/container", lxdIPAddress)
+	url := fmt.Sprintf("%s:9200/api/v1/container", lxdIPAddress)
 	payload, err := json.Marshal(data)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
 	if err != nil {
