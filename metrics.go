@@ -40,6 +40,8 @@ type scoring struct {
 
 type metricsDB interface {
 	callMetricAPI(query string) (*promResponse, error)
+	getLowestLoadLxdInstance() (*lxd, error)
+	getFreeMemory() (*promResponse, error)
 }
 
 type prometheusMetricsDB struct{}
@@ -77,8 +79,8 @@ func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) 
 	return &result, nil
 }
 
-func (s *scheduler) getLowestLoadLxdInstance() (*lxd, error) {
-	freeMemory, err := s.getFreeMemory()
+func (p prometheusMetricsDB) getLowestLoadLxdInstance() (*lxd, error) {
+	freeMemory, err := p.getFreeMemory()
 	if err != nil {
 		return nil, err
 	}
@@ -88,16 +90,11 @@ func (s *scheduler) getLowestLoadLxdInstance() (*lxd, error) {
 		Address: lowestLoadLxdIPAddress,
 	}
 
-	lxdInstance.getLxdByIP(s.DB)
-	if err != nil {
-		return nil, err
-	}
-
 	return &lxdInstance, nil
 }
 
-func (s *scheduler) getFreeMemory() (*promResponse, error) {
-	return s.metricsDB.callMetricAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[24h]) + avg_over_time(node_memory_Cached_bytes[24h]) + avg_over_time(node_memory_Buffers_bytes[24h])) / avg_over_time(node_memory_MemTotal_bytes[24h])))")
+func (p prometheusMetricsDB) getFreeMemory() (*promResponse, error) {
+	return p.callMetricAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[24h]) + avg_over_time(node_memory_Cached_bytes[24h]) + avg_over_time(node_memory_Buffers_bytes[24h])) / avg_over_time(node_memory_MemTotal_bytes[24h])))")
 }
 
 func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {

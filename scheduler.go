@@ -67,9 +67,9 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	if err != nil {
 		return err
 	}
+
 	s.Router = mux.NewRouter()
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
-
 	s.client = agentClient{}
 
 	return nil
@@ -86,29 +86,36 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	defer r.Body.Close()
 
-	//some lxd chooser algorithm ...
-	lxdIPAddress := "172.28.128.6"
-	lxdID := "very-unique-lxd-uuid"
+	defer r.Body.Close()
+	lxdInstance, err := s.metricsDB.getLowestLoadLxdInstance()
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	lxdInstance.getLxdByIP(s.DB)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	newLxc := lxc{
 		ID:         uuid.New(),
-		LxdID:      lxdID,
+		LxdID:      lxdInstance.ID,
 		Name:       data.Name,
 		Type:       data.Type,
 		Alias:      data.Alias,
 		IsDeployed: 1,
 	}
 
-	err := newLxc.insertLxc(s.DB)
+	err = newLxc.insertLxc(s.DB)
 	if err != nil {
-		fmt.Println(err.Error())
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	op, err := s.createNewLxc(data, lxdIPAddress)
+	op, err := s.createNewLxc(data, lxdInstance.Address)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return

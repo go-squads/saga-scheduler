@@ -36,6 +36,7 @@ func TestSchedulerSuite(t *testing.T) {
 
 func (suite *SchedulerSuite) SetupSuite() {
 	schedulerSuites = scheduler{}
+	schedulerSuites.metricsDB = testPrometheusMetricsDB{}
 	err := schedulerSuites.initialize("postgres", "postgres", "saga", "localhost", "5432", "disable")
 	suite.NoError(err, "They should be no error")
 
@@ -53,6 +54,32 @@ func (suite *SchedulerSuite) SetupSuite() {
 
 	_, err = operationScheduler.DB.Exec("INSERT INTO lxc (id, lxd_id, name, type, alias, is_deployed) VALUES ('very-unique-lxc-uuid','very-unique-lxd-uuid', 'test-lxc-1', 'image', '16.04', 0);")
 	suite.NoError(err, "They should be no error")
+
+	valueSmall = append(valueSmall, 123.456)
+	valueSmall = append(valueSmall, "30.0")
+
+	valueLarge = append(valueLarge, 123.456)
+	valueLarge = append(valueLarge, "70.0")
+
+	testMemResponse = promResponse{
+		Status: "success",
+		Data: promResponseData{
+			Result: []result{
+				result{
+					Metric: metric{
+						Instance: "192.168.0.1:9090",
+					},
+					Value: valueLarge,
+				},
+				result{
+					Metric: metric{
+						Instance: "Bar",
+					},
+					Value: valueSmall,
+				},
+			},
+		},
+	}
 
 }
 

@@ -14,11 +14,26 @@ var valueSmall []interface{}
 var valueLarge []interface{}
 var testMemResponse promResponse
 
+var textLXD lxd
+
 var metricsScheduler scheduler
 
 type testPrometheusMetricsDB struct{}
 
 func (p testPrometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) {
+	return &testMemResponse, nil
+}
+
+func (p testPrometheusMetricsDB) getLowestLoadLxdInstance() (*lxd, error) {
+	return &lxd{
+		ID:          "very-unique-lxd-uuid",
+		Name:        "test-lxc-1",
+		Address:     "192.168.0.1",
+		Description: "",
+	}, nil
+}
+
+func (p testPrometheusMetricsDB) getFreeMemory() (*promResponse, error) {
 	return &testMemResponse, nil
 }
 
@@ -72,13 +87,13 @@ func (suite *MetricsSuite) TestCalculateMetricsFailed() {
 }
 
 func (suite *MetricsSuite) TestGetFreeMemorySuccessful() {
-	actual, err := metricsScheduler.getFreeMemory()
+	actual, err := metricsScheduler.metricsDB.getFreeMemory()
 	suite.NoError(err, "They should be no error")
 	suite.Equal("success", actual.Status, "They should be equal")
 }
 
 func (suite *MetricsSuite) TestGetLowestLoadLxdInstanceSuccessful() {
-	actual, err := metricsScheduler.getLowestLoadLxdInstance()
+	actual, err := metricsScheduler.metricsDB.getLowestLoadLxdInstance()
 	suite.NoError(err, "They should be no error")
 	suite.Equal("192.168.0.1", actual.Address, "They should be equal")
 }
