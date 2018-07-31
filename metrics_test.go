@@ -43,13 +43,15 @@ func TestMetricsSuite(t *testing.T) {
 
 func (suite *MetricsSuite) SetupSuite() {
 	metricsScheduler = scheduler{}
-	metricsScheduler.metricsDB = testPrometheusMetricsDB{}
 	metricsScheduler.initialize("postgres", "postgres", "saga", "localhost", "5432", "disable")
+	cleanupDB()
 	valueSmall = append(valueSmall, 123.456)
 	valueSmall = append(valueSmall, "30.0")
 
 	valueLarge = append(valueLarge, 123.456)
 	valueLarge = append(valueLarge, "70.0")
+
+	metricsScheduler.metricsDB = testPrometheusMetricsDB{}
 
 	testMemResponse = promResponse{
 		Status: "success",
@@ -73,7 +75,15 @@ func (suite *MetricsSuite) SetupSuite() {
 }
 
 func (suite *MetricsSuite) TearDownSuite() {
+	cleanupDB()
+}
 
+func cleanupDB() {
+	clearQuery := `DELETE FROM operation;
+	DELETE FROM lxc;
+	DELETE FROM lxd;`
+
+	metricsScheduler.DB.Exec(clearQuery)
 }
 
 func (suite *MetricsSuite) TestCalculateMetricsSuccessful() {

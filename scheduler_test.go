@@ -36,11 +36,12 @@ func TestSchedulerSuite(t *testing.T) {
 
 func (suite *SchedulerSuite) SetupSuite() {
 	schedulerSuites = scheduler{}
-	schedulerSuites.metricsDB = testPrometheusMetricsDB{}
 	err := schedulerSuites.initialize("postgres", "postgres", "saga", "localhost", "5432", "disable")
+
 	suite.NoError(err, "They should be no error")
 
 	schedulerSuites.client = testAgentClient{}
+	schedulerSuites.metricsDB = testPrometheusMetricsDB{}
 
 	clearQuery := `DELETE FROM operation;
 	DELETE FROM lxc;

@@ -95,7 +95,7 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	lxdInstance.getLxdByIP(s.DB)
+	err = lxdInstance.getLxdByIP(s.DB)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
@@ -122,18 +122,19 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	op.LxcID = newLxc.ID
 	err = op.insertOperation(s.DB)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, nil)
+	respondWithJSON(w, http.StatusOK, op)
 	return
 }
 
 func (s *scheduler) createNewLxc(data createContainerRequestData, lxdIPAddress string) (op *operation, err error) {
-	url := fmt.Sprintf("%s:9200/api/v1/container", lxdIPAddress)
+	url := fmt.Sprintf("http://%s:9200/api/v1/container", lxdIPAddress)
 	payload, err := json.Marshal(data)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
 	if err != nil {

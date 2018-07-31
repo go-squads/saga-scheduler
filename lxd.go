@@ -27,7 +27,7 @@ func (l *lxd) getLxd(db *sqlx.DB) error {
 }
 
 func (l *lxd) getLxdByIP(db *sqlx.DB) error {
-	rows, err := db.Queryx("SELECT * FROM lxd WHERE address=$1 LIMIT 1", l.Address)
+	rows, err := db.Queryx("SELECT id, address FROM lxd WHERE address=$1 LIMIT 1", l.Address)
 	if err != nil {
 		return err
 	}
