@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type promResponse struct {
@@ -58,7 +59,7 @@ func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) 
 	q.Add("query", query)
 	req.URL.RawQuery = q.Encode()
 	client := &http.Client{
-		Timeout: 10,
+		Timeout: 10 * time.Second,
 	}
 	resp, err := client.Do(req)
 	if err != nil {

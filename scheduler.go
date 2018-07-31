@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
@@ -37,7 +38,7 @@ type agentClient struct{}
 
 func (a agentClient) executeOperationRequest(req *http.Request) (*operation, error) {
 	client := &http.Client{
-		Timeout: 10,
+		Timeout: 10 * time.Second,
 	}
 	response, err := client.Do(req)
 	if err != nil {
