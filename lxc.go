@@ -16,7 +16,7 @@ type lxc struct {
 }
 
 func (l *lxc) getLxc(db *sqlx.DB) error {
-	rows, err := db.Queryx("SELECT * FROM lxc WHERE id=$1 LIMIT 1", l.ID)
+	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, is_deployed FROM lxc WHERE id=$1 LIMIT 1", l.ID)
 	if err != nil {
 		return err
 	}
@@ -28,6 +28,24 @@ func (l *lxc) getLxc(db *sqlx.DB) error {
 		}
 	}
 	return nil
+}
+
+func getPendingLxcs(db *sqlx.DB) ([]lxc, error) {
+	var result []lxc
+	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, is_deployed FROM lxc WHERE is_deployed = 0")
+	if err != nil {
+		return nil, err
+	}
+
+	if rows.Next() {
+		var temp lxc
+		err = rows.StructScan(&temp)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, temp)
+	}
+	return result, nil
 }
 
 func (l *lxc) insertLxc(db *sqlx.DB) error {

@@ -12,7 +12,7 @@ type lxd struct {
 }
 
 func (l *lxd) getLxd(db *sqlx.DB) error {
-	rows, err := db.Queryx("SELECT * FROM lxd WHERE id=$1 LIMIT 1", l.ID)
+	rows, err := db.Queryx("SELECT id, name, address, description FROM lxd WHERE id=$1 LIMIT 1", l.ID)
 	if err != nil {
 		return err
 	}

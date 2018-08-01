@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/jasonlvhit/gocron"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/pborman/uuid"
@@ -74,6 +75,48 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 	return nil
+}
+
+func (s *scheduler) startCronJob() {
+	gocron.Every(1).Minute().Do(s.doCron)
+}
+
+func (s *scheduler) doCron() {
+	fmt.Println("Doing cron job")
+	lxcs, err := getPendingLxcs(s.DB)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < len(lxcs); i++ {
+
+		data := createContainerRequestData{
+			Name:     lxcs[i].Name,
+			Type:     lxcs[i].Type,
+			Protocol: "simplestreams",
+			Alias:    lxcs[i].Alias,
+		}
+
+		lxdInstance := lxd{
+			ID: lxcs[i].LxdID,
+		}
+
+		err = lxdInstance.getLxd(s.DB)
+		if err != nil {
+			panic(err)
+		}
+
+		op, err := s.createNewLxc(data, lxdInstance.Address)
+		if err != nil {
+			panic(err)
+		}
+
+		op.LxcID = lxcs[i].ID
+		err = op.insertOperation(s.DB)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (s *scheduler) run(port string) {
