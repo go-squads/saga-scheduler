@@ -11,12 +11,13 @@ type lxc struct {
 	Type        string `db:"type" json:"type"`
 	Alias       string `db:"alias" json:"alias"`
 	Address     string `db:"address" json:"address"`
+	Status      string `db:"status" json:"status"`
 	Description string `db:"description" json:"description"`
 	IsDeployed  int    `db:"is_deployed" json:"is_deployed"`
 }
 
 func (l *lxc) getLxc(db *sqlx.DB) error {
-	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, is_deployed FROM lxc WHERE id=$1 LIMIT 1", l.ID)
+	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, status, is_deployed FROM lxc WHERE id=$1 LIMIT 1", l.ID)
 	if err != nil {
 		return err
 	}
@@ -26,6 +27,14 @@ func (l *lxc) getLxc(db *sqlx.DB) error {
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func updateStatusByName(db *sqlx.DB, name, status string) error {
+	_, err := db.Exec("UPDATE lxc SET status = $2 WHERE name = $1", name, status)
+	if err != nil {
+		return err
 	}
 	return nil
 }

@@ -82,45 +82,48 @@ func (s *scheduler) startCronJob() {
 }
 
 func (s *scheduler) doCron() {
-	fmt.Println("Doing cron job")
-	lxcs, err := getPendingLxcs(s.DB)
+	lxds, err := getLxds(s.DB)
 	if err != nil {
 		panic(err)
 	}
-
-	for i := 0; i < len(lxcs); i++ {
-
-		data := createContainerRequestData{
-			Name:     lxcs[i].Name,
-			Type:     lxcs[i].Type,
-			Protocol: "simplestreams",
-			Alias:    lxcs[i].Alias,
-		}
-
-		lxdInstance := lxd{
-			ID: lxcs[i].LxdID,
-		}
-
-		err = lxdInstance.getLxd(s.DB)
+	for i := 0; i < len(lxds); i++ {
+		url := fmt.Sprintf("http://%s:9200/api/v1/container", lxds[i].Address)
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			panic(err)
 		}
 
-		op, err := s.createNewLxc(data, lxdInstance.Address)
+		client := &http.Client{
+			Timeout: 10 * time.Second,
+		}
+		response, err := client.Do(req)
 		if err != nil {
 			panic(err)
 		}
 
-		op.LxcID = lxcs[i].ID
-		err = op.insertOperation(s.DB)
+		defer response.Body.Close()
+
+		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			panic(err)
 		}
 
-		lxcs[i].IsDeployed = 1
-		err = lxcs[i].updateIsDeployed(s.DB)
+		type lxdResponse struct {
+			Name   string `json:"name"`
+			Status string `json:"status"`
+		}
+		var resp []lxdResponse
+
+		err = json.Unmarshal(body, &resp)
 		if err != nil {
 			panic(err)
+		}
+
+		for j := 0; j < len(resp); j++ {
+			err = updateStatusByName(s.DB, resp[j].Name, resp[j].Status)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 }
