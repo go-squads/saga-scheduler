@@ -33,7 +33,7 @@ func getLxds(db *sqlx.DB) ([]lxd, error) {
 		return nil, err
 	}
 
-	if rows.Next() {
+	for rows.Next() {
 		var temp lxd
 		err = rows.StructScan(&temp)
 		if err != nil {
