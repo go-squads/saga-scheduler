@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jasonlvhit/gocron"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/pborman/uuid"
@@ -21,7 +20,6 @@ type scheduler struct {
 	DB        *sqlx.DB
 	client    client
 	metricsDB metricsDB
-	cron      *gocron.Scheduler
 }
 
 type createContainerRequestData struct {
@@ -75,61 +73,8 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
-	s.cron = gocron.NewScheduler()
+
 	return nil
-}
-
-func (s *scheduler) startCronJob() {
-	s.cron.Every(1).Minute().Do(s.doCron)
-	<-s.cron.Start()
-}
-
-func (s *scheduler) doCron() {
-	fmt.Println("--- running the cron job ---")
-	lxds, err := getLxds(s.DB)
-	if err != nil {
-		panic(err)
-	}
-	for i := 0; i < len(lxds); i++ {
-		url := fmt.Sprintf("http://%s:9200/api/v1/containers", lxds[i].Address)
-		req, err := http.NewRequest("GET", url, nil)
-		if err != nil {
-			panic(err)
-		}
-
-		client := &http.Client{
-			Timeout: 10 * time.Second,
-		}
-		response, err := client.Do(req)
-		if err != nil {
-			panic(err)
-		}
-
-		defer response.Body.Close()
-
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			panic(err)
-		}
-
-		type lxdResponse struct {
-			Name   string `json:"name"`
-			Status string `json:"status"`
-		}
-		var resp []lxdResponse
-
-		err = json.Unmarshal(body, &resp)
-		if err != nil {
-			panic(err)
-		}
-
-		for j := 0; j < len(resp); j++ {
-			err = updateStatusByName(s.DB, resp[j].Name, resp[j].Status)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
 }
 
 func (s *scheduler) run(port string) {
