@@ -30,6 +30,14 @@ func (l *lxc) getLxc(db *sqlx.DB) error {
 	return nil
 }
 
+func (l *lxc) updateIsDeployed(db *sqlx.DB) error {
+	_, err := db.Exec("UPDATE lxc SET is_deployed = $2 WHERE id=$1", l.ID, l.IsDeployed)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func getPendingLxcs(db *sqlx.DB) ([]lxc, error) {
 	var result []lxc
 	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, is_deployed FROM lxc WHERE is_deployed = 0")

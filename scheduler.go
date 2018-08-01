@@ -116,6 +116,12 @@ func (s *scheduler) doCron() {
 		if err != nil {
 			panic(err)
 		}
+
+		lxcs[i].IsDeployed = 1
+		err = lxcs[i].updateIsDeployed(s.DB)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
