@@ -21,6 +21,7 @@ type scheduler struct {
 	DB        *sqlx.DB
 	client    client
 	metricsDB metricsDB
+	cron      *gocron.Scheduler
 }
 
 type createContainerRequestData struct {
@@ -74,20 +75,23 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
+	s.cron = gocron.NewScheduler()
 	return nil
 }
 
 func (s *scheduler) startCronJob() {
-	gocron.Every(1).Minute().Do(s.doCron)
+	s.cron.Every(1).Minute().Do(s.doCron)
+	<-s.cron.Start()
 }
 
 func (s *scheduler) doCron() {
+	fmt.Println("--- running the cron job ---")
 	lxds, err := getLxds(s.DB)
 	if err != nil {
 		panic(err)
 	}
 	for i := 0; i < len(lxds); i++ {
-		url := fmt.Sprintf("http://%s:9200/api/v1/container", lxds[i].Address)
+		url := fmt.Sprintf("http://%s:9200/api/v1/containers", lxds[i].Address)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			panic(err)
