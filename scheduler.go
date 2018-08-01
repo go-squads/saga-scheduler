@@ -71,6 +71,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 
 	s.Router = mux.NewRouter()
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
+	s.Router.HandleFunc("/api/v1/container", s.getContainerHandler).Methods("GET")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -79,6 +80,33 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 
 func (s *scheduler) run(port string) {
 	log.Fatal(http.ListenAndServe(port, s.Router))
+}
+
+func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) {
+	type resp struct {
+		ID      string `json:"id" db:"id"`
+		LXDName string `json:"lxd_name" db:"lxd_name"`
+		LXCName string `json:"lxc_name" db:"lxc_name"`
+		Image   string `json:"image" db:"image"`
+		Status  string `json:"status" db:"status"`
+	}
+
+	var result []resp
+	rows, err := s.DB.Queryx(`SELECT c.id as "id", c.name as "lxc_name", d.name as "lxd_name", c.alias as "image", c.status as "status" FROM lxc c JOIN lxd d ON c.lxd_id = d.id`)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+	}
+
+	for rows.Next() {
+		var temp resp
+		err = rows.StructScan(&temp)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+		}
+		result = append(result, temp)
+	}
+
+	respondWithJSON(w, http.StatusOK, result)
 }
 
 func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) {
