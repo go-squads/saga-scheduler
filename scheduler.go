@@ -7,10 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -81,11 +79,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 }
 
 func (s *scheduler) run(port string) {
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With"})
-	originsOk := handlers.AllowedOrigins([]string{os.Getenv("ORIGIN_ALLOWED")})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
-
-	log.Fatal(http.ListenAndServe(port, handlers.CORS(originsOk, headersOk, methodsOk)(s.Router)))
+	log.Fatal(http.ListenAndServe(port, s.Router))
 }
 
 func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) {
@@ -186,6 +180,7 @@ func respondWithError(w http.ResponseWriter, code int, message string) {
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	response, _ := json.Marshal(payload)
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(code)
 	w.Write(response)
 }
