@@ -72,6 +72,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router = mux.NewRouter()
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/container", s.getContainerHandler).Methods("GET")
+	s.Router.HandleFunc("/api/v1/container/updatestate", s.updateStateLxcHandler).Methods("POST")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -171,6 +172,54 @@ func (s *scheduler) createNewLxc(data createContainerRequestData, lxdIPAddress s
 	}
 
 	return s.client.executeOperationRequest(req)
+}
+
+func (s *scheduler) updateStateLxcHandler(w http.ResponseWriter, r *http.Request) {
+	type updateStateRequest struct {
+		ID    string `json:"id"`
+		Name  string `json:"name"`
+		State struct {
+			Action  string `json:"action"`
+			Timeout int    `json:"timeout"`
+		} `json:"state"`
+	}
+
+	var data updateStateRequest
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&data); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	lxc := lxc{
+		ID: data.ID,
+	}
+
+	if err := lxc.getLxc(s.DB); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	lxd := lxd{
+		ID: lxc.LxdID,
+	}
+
+	if err := lxd.getLxd(s.DB); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	url := fmt.Sprintf("http://%s:9200/api/v1/container/updatestate", lxd.Address)
+	payload, err := json.Marshal(data)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	op, err := s.client.executeOperationRequest(req)
+	respondWithJSON(w, http.StatusOK, op)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {

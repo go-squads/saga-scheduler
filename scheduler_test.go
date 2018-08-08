@@ -106,3 +106,24 @@ func (suite *SchedulerSuite) TestCreateNewLxcHandlerSuccessful() {
 	router.ServeHTTP(rr, req)
 	suite.Equal(http.StatusOK, rr.Code, "They should be equal")
 }
+
+func (suite *SchedulerSuite) TestUpdateStateLxcHandlerSuccessful() {
+	payload := []byte(`{
+		"id": "very-unique-lxc-uuid",
+		"name":"container-new", 
+		"state": {
+			"action":"stop", 
+			"timeout":60
+		}
+	}`)
+	req, err := http.NewRequest("POST", "/api/v1/container/updatestate", bytes.NewBuffer(payload))
+	if err != nil {
+		suite.Fail(err.Error())
+	}
+
+	rr := httptest.NewRecorder()
+	router := mux.NewRouter()
+	router.HandleFunc("/api/v1/container/updatestate", schedulerSuites.updateStateLxcHandler)
+	router.ServeHTTP(rr, req)
+	suite.Equal(http.StatusOK, rr.Code, "They should be equal")
+}
