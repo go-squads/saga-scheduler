@@ -127,3 +127,19 @@ func (suite *SchedulerSuite) TestUpdateStateLxcHandlerSuccessful() {
 	router.ServeHTTP(rr, req)
 	suite.Equal(http.StatusOK, rr.Code, "They should be equal")
 }
+
+func (suite *SchedulerSuite) TestDeleteLxcHandler() {
+	payload := []byte(`{
+		"id": "very-unique-lxc-uuid",
+	}`)
+	req, err := http.NewRequest("DELETE", "/api/v1/container", bytes.NewBuffer(payload))
+	if err != nil {
+		suite.Fail(err.Error())
+	}
+
+	rr := httptest.NewRecorder()
+	router := mux.NewRouter()
+	router.HandleFunc("/api/v1/container", schedulerSuites.deleteLxcHandler)
+	router.ServeHTTP(rr, req)
+	suite.Equal(http.StatusOK, rr.Code, "They should be equal")
+}

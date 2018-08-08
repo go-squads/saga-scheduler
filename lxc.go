@@ -73,3 +73,11 @@ func (l *lxc) insertLxc(db *sqlx.DB) error {
 
 	return nil
 }
+
+func (l *lxc) deleteLxc(db *sqlx.DB) error {
+	_, err := db.Queryx("DELETE FROM lxc WHERE id = $1", l.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
