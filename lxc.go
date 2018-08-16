@@ -81,3 +81,23 @@ func (l *lxc) deleteLxc(db *sqlx.DB) error {
 	}
 	return nil
 }
+
+func (l *lxc) getLxcListByLxdID(db *sqlx.DB, lxdID string) ([]lxc, error) {
+	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, status, is_deployed FROM lxc WHERE lxd_id=$1", lxdID)
+	if err != nil {
+		return nil, err
+	}
+
+	lxcList := []lxc{}
+
+	for rows.Next() {
+		l := lxc{}
+		err = rows.StructScan(&l)
+		if err != nil {
+			return nil, err
+		}
+		lxcList = append(lxcList, l)
+	}
+
+	return lxcList, nil
+}

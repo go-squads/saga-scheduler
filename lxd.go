@@ -67,3 +67,18 @@ func (l *lxd) insertLxd(db *sqlx.DB) error {
 
 	return nil
 }
+
+func (l *lxd) getLxdIDByName(db *sqlx.DB) error {
+	rows, err := db.Queryx("SELECT id, name, address, description FROM lxd WHERE name = $1", l.Name)
+	if err != nil {
+		return err
+	}
+
+	if rows.Next() {
+		err = rows.StructScan(&l)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

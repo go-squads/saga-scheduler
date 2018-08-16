@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/pborman/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 type scheduler struct {
@@ -74,6 +74,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router.HandleFunc("/api/v1/container", s.getContainerHandler).Methods("GET")
 	s.Router.HandleFunc("/api/v1/container/updatestate", s.updateStateLxcHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/container", s.deleteLxcHandler).Methods("DELETE")
+	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -112,6 +113,7 @@ func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("-- Got new create lxc request --")
 	var data createContainerRequestData
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
@@ -176,6 +178,7 @@ func (s *scheduler) createNewLxc(data createContainerRequestData, lxdIPAddress s
 }
 
 func (s *scheduler) deleteLxcHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("-- Got delete lxc request --")
 	type deleteLxcRequest struct {
 		ID   string `json:"id,omitempty"`
 		Name string `json:"name"`
@@ -235,6 +238,7 @@ func (s *scheduler) deleteLxcHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *scheduler) updateStateLxcHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("-- Got update state lxc request --")
 	type updateStateRequest struct {
 		ID    string `json:"id"`
 		Name  string `json:"name"`
@@ -286,6 +290,27 @@ func (s *scheduler) updateStateLxcHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	respondWithJSON(w, http.StatusOK, op)
+}
+
+func (s *scheduler) getLxcListByLxdNameHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("-- Got get lxc by lxd name request --")
+	vars := mux.Vars(r)
+	lxdName := vars["lxdName"]
+	lxdSearch := lxd{Name: lxdName}
+
+	if err := lxdSearch.getLxdIDByName(s.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	lxcSearch := lxc{}
+	lxcList, err := lxcSearch.getLxcListByLxdID(s.DB, lxdSearch.ID)
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, lxcList)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
