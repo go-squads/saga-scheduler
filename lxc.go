@@ -10,10 +10,11 @@ type lxc struct {
 	Name        string `db:"name" json:"name"`
 	Type        string `db:"type" json:"type"`
 	Alias       string `db:"alias" json:"alias"`
+	Protocol    string `db:"protocol" json:"protocol"`
+	Server      string `db:"server" json:"server"`
 	Address     string `db:"address" json:"address"`
 	Status      string `db:"status" json:"status"`
 	Description string `db:"description" json:"description"`
-	IsDeployed  int    `db:"is_deployed" json:"is_deployed"`
 }
 
 func (l *lxc) getLxc(db *sqlx.DB) error {
@@ -39,14 +40,6 @@ func updateStatusByName(db *sqlx.DB, name, status string) error {
 	return nil
 }
 
-func (l *lxc) updateIsDeployed(db *sqlx.DB) error {
-	_, err := db.Exec("UPDATE lxc SET is_deployed = $2 WHERE id=$1", l.ID, l.IsDeployed)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func getPendingLxcs(db *sqlx.DB) ([]lxc, error) {
 	var result []lxc
 	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, is_deployed FROM lxc WHERE is_deployed = 0")
@@ -66,7 +59,7 @@ func getPendingLxcs(db *sqlx.DB) ([]lxc, error) {
 }
 
 func (l *lxc) insertLxc(db *sqlx.DB) error {
-	_, err := db.NamedExec("INSERT INTO lxc (id, lxd_id, name, type, alias, address, description, is_deployed) VALUES (:id, :lxd_id, :name, :type, :alias, :address, :description, :is_deployed)", l)
+	_, err := db.NamedExec("INSERT INTO lxc (id, lxd_id, name, type, alias, protocol, server, address, description, status) VALUES (:id, :lxd_id, :name, :type, :alias, :protocol, :server, :address, :description, :status)", l)
 	if err != nil {
 		return err
 	}

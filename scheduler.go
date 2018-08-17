@@ -22,14 +22,6 @@ type scheduler struct {
 	metricsDB metricsDB
 }
 
-type createContainerRequestData struct {
-	Name     string `json:"name,omitempty"`
-	Type     string `json:"type,omitempty"`
-	Protocol string `json:"protocol,omitempty"`
-	Server   string `json:"server,omitempty"`
-	Alias    string `json:"alias,omitempty"`
-}
-
 type client interface {
 	executeOperationRequest(req *http.Request) (*operation, error)
 }
@@ -114,9 +106,9 @@ func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) 
 
 func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("-- Got new create lxc request --")
-	var data createContainerRequestData
+	var newLxc lxc
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&data); err != nil {
+	if err := decoder.Decode(&newLxc); err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -134,14 +126,9 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	newLxc := lxc{
-		ID:         uuid.New(),
-		LxdID:      lxdInstance.ID,
-		Name:       data.Name,
-		Type:       data.Type,
-		Alias:      data.Alias,
-		IsDeployed: 1,
-	}
+	newLxc.ID = uuid.New()
+	newLxc.Status = "creating"
+	newLxc.LxdID = lxdInstance.ID
 
 	err = newLxc.insertLxc(s.DB)
 	if err != nil {
@@ -149,32 +136,7 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	op, err := s.createNewLxc(data, lxdInstance.Address)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	op.LxcID = newLxc.ID
-	err = op.insertOperation(s.DB)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, op)
-	return
-}
-
-func (s *scheduler) createNewLxc(data createContainerRequestData, lxdIPAddress string) (op *operation, err error) {
-	url := fmt.Sprintf("http://%s:9200/api/v1/container", lxdIPAddress)
-	payload, err := json.Marshal(data)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
-	if err != nil {
-		return nil, err
-	}
-
-	return s.client.executeOperationRequest(req)
+	respondWithJSON(w, http.StatusOK, newLxc)
 }
 
 func (s *scheduler) deleteLxcHandler(w http.ResponseWriter, r *http.Request) {
