@@ -76,7 +76,7 @@ func (l *lxc) deleteLxc(db *sqlx.DB) error {
 }
 
 func (l *lxc) getLxcListByLxdID(db *sqlx.DB, lxdID string) ([]lxc, error) {
-	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, status, is_deployed FROM lxc WHERE lxd_id=$1", lxdID)
+	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, protocol, server, address, description, status FROM lxc WHERE lxd_id=$1", lxdID)
 	if err != nil {
 		return nil, err
 	}
