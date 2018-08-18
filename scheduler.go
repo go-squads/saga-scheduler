@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -64,7 +63,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router = mux.NewRouter()
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/container", s.getContainerHandler).Methods("GET")
-	s.Router.HandleFunc("/api/v1/container", s.deleteLxcHandler).Methods("DELETE")
+	s.Router.HandleFunc("/api/v1/lxc", s.deleteLxcHandler).Methods("DELETE")
 	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
 	s.Router.HandleFunc("/api/v1/lxc/{id}", s.updateLxcStatusByIDHandler).Methods("PUT")
 	s.client = agentClient{}
@@ -107,7 +106,7 @@ func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) 
 
 func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("-- Got new create lxc request --")
-	var newLxc lxc
+	newLxc := lxc{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&newLxc); err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
@@ -141,62 +140,19 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 
 func (s *scheduler) deleteLxcHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("-- Got delete lxc request --")
-	type deleteLxcRequest struct {
-		ID   string `json:"id,omitempty"`
-		Name string `json:"name"`
-	}
+	lxcDeleteData := lxc{}
 
-	var data deleteLxcRequest
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&data); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&lxcDeleteData); err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	lxc := lxc{
-		ID: data.ID,
-	}
-
-	if err := lxc.getLxc(s.DB); err != nil {
+	if err := lxcDeleteData.deleteLxc(s.DB); err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	lxd := lxd{
-		ID: lxc.LxdID,
-	}
-
-	if err := lxd.getLxd(s.DB); err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	data.Name = lxc.Name
-
-	url := fmt.Sprintf("http://%s:9200/api/v1/container", lxd.Address)
-	payload, err := json.Marshal(data)
-	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(payload))
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	op, err := s.client.executeOperationRequest(req)
-
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	err = lxc.deleteLxc(s.DB)
-
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, op)
+	respondWithJSON(w, http.StatusOK, map[string]string{"message": "delete lxc success"})
 }
 
 func (s *scheduler) getLxcListByLxdNameHandler(w http.ResponseWriter, r *http.Request) {
