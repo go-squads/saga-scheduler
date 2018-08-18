@@ -74,6 +74,8 @@ func (l *lxd) getLxdIDByName(db *sqlx.DB) error {
 		return err
 	}
 
+	defer rows.Close()
+
 	if rows.Next() {
 		err = rows.StructScan(&l)
 		if err != nil {

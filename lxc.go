@@ -32,8 +32,8 @@ func (l *lxc) getLxc(db *sqlx.DB) error {
 	return nil
 }
 
-func updateStatusByName(db *sqlx.DB, name, status string) error {
-	_, err := db.Exec("UPDATE lxc SET status = $2 WHERE name = $1", name, status)
+func (l *lxc) updateStatusByID(db *sqlx.DB) error {
+	_, err := db.Exec("UPDATE lxc SET status = $2 WHERE id = $1", l.ID, l.Status)
 	if err != nil {
 		return err
 	}
@@ -80,6 +80,7 @@ func (l *lxc) getLxcListByLxdID(db *sqlx.DB, lxdID string) ([]lxc, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	lxcList := []lxc{}
 

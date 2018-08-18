@@ -72,11 +72,11 @@ func (d *DatabaseWorker) doCron() {
 			panic(err)
 		}
 
-		for j := 0; j < len(resp); j++ {
-			err = updateStatusByName(d.DB, resp[j].Name, resp[j].Status)
-			if err != nil {
-				panic(err)
-			}
-		}
+		// for j := 0; j < len(resp); j++ {
+		// 	err = updateStatusByName(d.DB, resp[j].Name, resp[j].Status)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// }
 	}
 }

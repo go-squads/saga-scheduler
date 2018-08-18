@@ -64,9 +64,9 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router = mux.NewRouter()
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/container", s.getContainerHandler).Methods("GET")
-	s.Router.HandleFunc("/api/v1/container/updatestate", s.updateStateLxcHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/container", s.deleteLxcHandler).Methods("DELETE")
 	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
+	s.Router.HandleFunc("/api/v1/lxc/{id}", s.updateLxcStatusByIDHandler).Methods("PUT")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -90,6 +90,7 @@ func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) 
 	rows, err := s.DB.Queryx(`SELECT c.id as "id", c.name as "lxc_name", d.name as "lxd_name", c.alias as "image", c.status as "status" FROM lxc c JOIN lxd d ON c.lxd_id = d.id`)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	for rows.Next() {
@@ -113,7 +114,6 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	defer r.Body.Close()
 	lxdInstance, err := s.metricsDB.getLowestLoadLxdInstance()
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
@@ -199,61 +199,6 @@ func (s *scheduler) deleteLxcHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, op)
 }
 
-func (s *scheduler) updateStateLxcHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info("-- Got update state lxc request --")
-	type updateStateRequest struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		State struct {
-			Action  string `json:"action"`
-			Timeout int    `json:"timeout"`
-		} `json:"state"`
-	}
-
-	var data updateStateRequest
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&data); err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	lxc := lxc{
-		ID: data.ID,
-	}
-
-	if err := lxc.getLxc(s.DB); err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	lxd := lxd{
-		ID: lxc.LxdID,
-	}
-
-	if err := lxd.getLxd(s.DB); err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	url := fmt.Sprintf("http://%s:9200/api/v1/container/updatestate", lxd.Address)
-	payload, err := json.Marshal(data)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	op, err := s.client.executeOperationRequest(req)
-
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, op)
-}
-
 func (s *scheduler) getLxcListByLxdNameHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("-- Got get lxc by lxd name request --")
 	vars := mux.Vars(r)
@@ -262,6 +207,7 @@ func (s *scheduler) getLxcListByLxdNameHandler(w http.ResponseWriter, r *http.Re
 
 	if err := lxdSearch.getLxdIDByName(s.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 
 	lxcSearch := lxc{}
@@ -273,6 +219,27 @@ func (s *scheduler) getLxcListByLxdNameHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	respondWithJSON(w, http.StatusOK, lxcList)
+}
+
+func (s *scheduler) updateLxcStatusByIDHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("-- Got update lxc status by id request --")
+	vars := mux.Vars(r)
+
+	lxcUpdateData := lxc{}
+
+	if err := json.NewDecoder(r.Body).Decode(&lxcUpdateData); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	lxcUpdateData.ID = vars["id"]
+
+	if err := lxcUpdateData.updateStatusByID(s.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]string{"message": "success updating lxc state"})
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
