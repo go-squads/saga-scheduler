@@ -61,8 +61,8 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	}
 
 	s.Router = mux.NewRouter()
-	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
-	s.Router.HandleFunc("/api/v1/container", s.getContainerHandler).Methods("GET")
+	s.Router.HandleFunc("/api/v1/lxc", s.createNewLxcHandler).Methods("POST")
+	s.Router.HandleFunc("/api/v1/lxc", s.getContainerHandler).Methods("GET")
 	s.Router.HandleFunc("/api/v1/lxc", s.updateLxcStatusByIDHandler).Methods("PUT")
 	s.Router.HandleFunc("/api/v1/lxc", s.deleteLxcHandler).Methods("DELETE")
 	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
