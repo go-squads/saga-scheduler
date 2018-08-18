@@ -63,9 +63,9 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router = mux.NewRouter()
 	s.Router.HandleFunc("/api/v1/container", s.createNewLxcHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/container", s.getContainerHandler).Methods("GET")
+	s.Router.HandleFunc("/api/v1/lxc", s.updateLxcStatusByIDHandler).Methods("PUT")
 	s.Router.HandleFunc("/api/v1/lxc", s.deleteLxcHandler).Methods("DELETE")
 	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
-	s.Router.HandleFunc("/api/v1/lxc/{id}", s.updateLxcStatusByIDHandler).Methods("PUT")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -179,7 +179,6 @@ func (s *scheduler) getLxcListByLxdNameHandler(w http.ResponseWriter, r *http.Re
 
 func (s *scheduler) updateLxcStatusByIDHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("-- Got update lxc status by id request --")
-	vars := mux.Vars(r)
 
 	lxcUpdateData := lxc{}
 
@@ -187,8 +186,6 @@ func (s *scheduler) updateLxcStatusByIDHandler(w http.ResponseWriter, r *http.Re
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	lxcUpdateData.ID = vars["id"]
 
 	if err := lxcUpdateData.updateStatusByID(s.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
