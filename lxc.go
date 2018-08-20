@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/jmoiron/sqlx"
+	log "github.com/sirupsen/logrus"
 )
 
 type lxc struct {
@@ -18,10 +19,11 @@ type lxc struct {
 }
 
 func (l *lxc) getLxc(db *sqlx.DB) error {
-	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, status, is_deployed FROM lxc WHERE id=$1 LIMIT 1", l.ID)
+	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, status FROM lxc WHERE id=$1 LIMIT 1", l.ID)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	if rows.Next() {
 		err = rows.StructScan(&l)
@@ -32,10 +34,34 @@ func (l *lxc) getLxc(db *sqlx.DB) error {
 	return nil
 }
 
+func (l *lxc) checkNeedUpdate(curLxc lxc) bool {
+	if curLxc.Status == "started" {
+		if l.Status == "starting" {
+			return false
+		} else {
+			return true
+		}
+	} else if curLxc.Status == "stopped" {
+		if l.Status == "stopping" {
+			return false
+		} else {
+			return true
+		}
+	}
+	return true
+}
+
 func (l *lxc) updateStatusByID(db *sqlx.DB) error {
-	_, err := db.Exec("UPDATE lxc SET status = $2 WHERE id = $1", l.ID, l.Status)
-	if err != nil {
+	curLxc := lxc{ID: l.ID}
+	if err := curLxc.getLxc(db); err != nil {
 		return err
+	}
+	if l.checkNeedUpdate(curLxc) {
+		log.Info("Lxc status update needed")
+		_, err := db.Exec("UPDATE lxc SET status = $2 WHERE id = $1", l.ID, l.Status)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
