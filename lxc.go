@@ -40,24 +40,6 @@ func (l *lxc) updateStatusByID(db *sqlx.DB) error {
 	return nil
 }
 
-func getPendingLxcs(db *sqlx.DB) ([]lxc, error) {
-	var result []lxc
-	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, is_deployed FROM lxc WHERE is_deployed = 0")
-	if err != nil {
-		return nil, err
-	}
-
-	if rows.Next() {
-		var temp lxc
-		err = rows.StructScan(&temp)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, temp)
-	}
-	return result, nil
-}
-
 func (l *lxc) insertLxc(db *sqlx.DB) error {
 	_, err := db.NamedExec("INSERT INTO lxc (id, lxd_id, name, type, alias, protocol, server, address, description, status) VALUES (:id, :lxd_id, :name, :type, :alias, :protocol, :server, :address, :description, :status)", l)
 	if err != nil {
