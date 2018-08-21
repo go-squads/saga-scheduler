@@ -6,16 +6,18 @@ import (
 )
 
 type lxc struct {
-	ID          string `db:"id" json:"id"`
-	LxdID       string `db:"lxd_id" json:"lxd_id"`
-	Name        string `db:"name" json:"name"`
-	Type        string `db:"type" json:"type"`
-	Alias       string `db:"alias" json:"alias"`
-	Protocol    string `db:"protocol" json:"protocol"`
-	Server      string `db:"server" json:"server"`
-	Address     string `db:"address" json:"address"`
-	Status      string `db:"status" json:"status"`
-	Description string `db:"description" json:"description"`
+	ID          string  `db:"id" json:"id"`
+	LxdID       string  `db:"lxd_id" json:"lxd_id"`
+	Name        string  `db:"name" json:"name"`
+	Type        string  `db:"type" json:"type"`
+	Alias       string  `db:"alias" json:"alias"`
+	Protocol    string  `db:"protocol" json:"protocol"`
+	Server      string  `db:"server" json:"server"`
+	Address     string  `db:"address" json:"address"`
+	Status      string  `db:"status" json:"status"`
+	Description string  `db:"description" json:"description"`
+	WeightScore string  `json:"weight"`
+	WeightValue float64 `json:"weightValue"`
 }
 
 func (l *lxc) getLxc(db *sqlx.DB) error {
@@ -105,9 +107,14 @@ func (l *lxc) getLxcListByLxdID(db *sqlx.DB, lxdID string) ([]lxc, error) {
 }
 
 func (l *lxc) checkIfLxcExist(db *sqlx.DB) bool {
-	_, err := db.Queryx("SELECT id, lxd_id, name, type, alias, protocol, server, address, description, status FROM lxc WHERE name=$1", l.Name)
+	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, protocol, server, address, description, status FROM lxc WHERE name=$1", l.Name)
 	if err != nil {
 		return false
 	}
-	return true
+	defer rows.Close()
+
+	if rows.Next() {
+		return true
+	}
+	return false
 }

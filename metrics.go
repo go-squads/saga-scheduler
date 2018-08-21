@@ -41,9 +41,14 @@ type scoring struct {
 	storageScore float64
 }
 
+type scoringWeight struct {
+	memScore float64
+	cpuScore float64
+}
+
 type metricsDB interface {
 	callMetricAPI(query string) (*promResponse, error)
-	getLowestLoadLxdInstance() (*lxd, error)
+	getLowestLoadLxdInstance(string, float64) (*lxd, error)
 	getFreeMemory() (*promResponse, error)
 }
 
@@ -82,7 +87,8 @@ func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) 
 	return &result, nil
 }
 
-func (p prometheusMetricsDB) getLowestLoadLxdInstance() (*lxd, error) {
+func (p prometheusMetricsDB) getLowestLoadLxdInstance(weight string, weightValue float64) (*lxd, error) {
+	scoreWeight := setWeightValues(weight, weightValue)
 	freeMemory, err := p.getFreeMemory()
 	if err != nil {
 		return nil, err
@@ -93,7 +99,7 @@ func (p prometheusMetricsDB) getLowestLoadLxdInstance() (*lxd, error) {
 		return nil, err
 	}
 
-	lowestLoadLxdIPAddress := calculateMetrics(*freeMemory, *freeCpu, promResponse{})
+	lowestLoadLxdIPAddress := calculateMetrics(*freeMemory, *freeCpu, promResponse{}, scoreWeight)
 	lxdInstance := lxd{
 		Address: lowestLoadLxdIPAddress,
 	}
@@ -109,22 +115,28 @@ func (p prometheusMetricsDB) getCpuUsage() (*promResponse, error) {
 	return p.callMetricAPI(`(avg by (instance) (irate(node_cpu_seconds_total{job="prometheus",mode="idle"}[1h])) * 100)`)
 }
 
-func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {
+// Insert in the payload
+func calculateMetrics(memResult, cpuResult, storageResult promResponse, scoringWeight scoringWeight) string {
 	var scores []scoring
 
-	log.Infof("Free CPU: %s", cpuResult.Data.Result[0].Value[1])
 	memoryScores := memResult.Data.Result
+	cpuScores := cpuResult.Data.Result
 
 	for i := 0; i < len(memoryScores); i++ {
 		address := memoryScores[i].Metric.Instance
-		strScore := memoryScores[i].Value[1].(string)
-		memScore, err := strconv.ParseFloat(strScore, 64)
-		if err != nil {
-			memScore = 0
-		}
+		strMemScore := memoryScores[i].Value[1].(string)
+		strCpuScore := cpuScores[i].Value[1].(string)
+		memScore := convertAndCalcNewScoreWeight(strMemScore, scoringWeight.memScore)
+		cpuScore := convertAndCalcNewScoreWeight(strCpuScore, scoringWeight.cpuScore)
+		log.Infof("Previous Free CPU for %s : %v", address, strCpuScore)
+		log.Infof("Modified Free CPU for %s : %v", address, cpuScore)
+		log.Infof("Previous Free Memory for %s : %v", address, strMemScore)
+		log.Infof("Modified Free Memory for %s : %v", address, memScore)
+
 		scores = append(scores, scoring{
 			address:  address,
 			memScore: memScore,
+			cpuScore: cpuScore,
 		})
 	}
 
@@ -140,6 +152,30 @@ func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {
 	return ipAddress[0]
 }
 
+func convertAndCalcNewScoreWeight(strScore string, weightValue float64) float64 {
+	score, err := strconv.ParseFloat(strScore, 64)
+	if err != nil {
+		log.Error("Failed to convert str to float, setting it to 0")
+		return 0
+	}
+	return score * weightValue
+}
+
 func calculateTotalScore(s scoring) float64 {
 	return s.cpuScore + s.memScore + s.storageScore
+}
+
+func setWeightValues(weight string, weightValue float64) scoringWeight {
+	s := scoringWeight{
+		cpuScore: 1.0,
+		memScore: 1.0,
+	}
+	switch w := weight; w {
+	case "cpu-centric":
+		s.cpuScore = 1.0 + (weightValue / 100)
+	case "memory-centric":
+		s.memScore = 1.0 + (weightValue / 100)
+	}
+
+	return s
 }
