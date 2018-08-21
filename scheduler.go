@@ -104,6 +104,7 @@ func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusOK, result)
 }
 
+// BUG IF LXC ALREADY EXIST
 func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("-- Got new create lxc request --")
 	newLxc := lxc{}
@@ -113,29 +114,34 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	lxdInstance, err := s.metricsDB.getLowestLoadLxdInstance()
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
+	exist := newLxc.checkIfLxcExist(s.DB)
+	if !exist {
+		lxdInstance, err := s.metricsDB.getLowestLoadLxdInstance()
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		err = lxdInstance.getLxdByIP(s.DB)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		newLxc.ID = uuid.New()
+		newLxc.Status = "creating"
+		newLxc.LxdID = lxdInstance.ID
+
+		err = newLxc.insertLxc(s.DB)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, newLxc)
+	} else {
+		log.Errorf("Lxc with name %s already exists", newLxc.Name)
 	}
-
-	err = lxdInstance.getLxdByIP(s.DB)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	newLxc.ID = uuid.New()
-	newLxc.Status = "creating"
-	newLxc.LxdID = lxdInstance.ID
-
-	err = newLxc.insertLxc(s.DB)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, newLxc)
 }
 
 func (s *scheduler) deleteLxcHandler(w http.ResponseWriter, r *http.Request) {

@@ -103,3 +103,11 @@ func (l *lxc) getLxcListByLxdID(db *sqlx.DB, lxdID string) ([]lxc, error) {
 
 	return lxcList, nil
 }
+
+func (l *lxc) checkIfLxcExist(db *sqlx.DB) bool {
+	_, err := db.Queryx("SELECT id, lxd_id, name, type, alias, protocol, server, address, description, status FROM lxc WHERE name=$1", l.Name)
+	if err != nil {
+		return false
+	}
+	return true
+}

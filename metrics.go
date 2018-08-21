@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type promResponse struct {
@@ -86,7 +88,12 @@ func (p prometheusMetricsDB) getLowestLoadLxdInstance() (*lxd, error) {
 		return nil, err
 	}
 
-	lowestLoadLxdIPAddress := calculateMetrics(*freeMemory, promResponse{}, promResponse{})
+	freeCpu, err := p.getCpuUsage()
+	if err != nil {
+		return nil, err
+	}
+
+	lowestLoadLxdIPAddress := calculateMetrics(*freeMemory, *freeCpu, promResponse{})
 	lxdInstance := lxd{
 		Address: lowestLoadLxdIPAddress,
 	}
@@ -98,9 +105,14 @@ func (p prometheusMetricsDB) getFreeMemory() (*promResponse, error) {
 	return p.callMetricAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[24h]) + avg_over_time(node_memory_Cached_bytes[24h]) + avg_over_time(node_memory_Buffers_bytes[24h])) / avg_over_time(node_memory_MemTotal_bytes[24h])))")
 }
 
+func (p prometheusMetricsDB) getCpuUsage() (*promResponse, error) {
+	return p.callMetricAPI(`(avg by (instance) (irate(node_cpu_seconds_total{job="prometheus",mode="idle"}[1h])) * 100)`)
+}
+
 func calculateMetrics(memResult, cpuResult, storageResult promResponse) string {
 	var scores []scoring
 
+	log.Infof("Free CPU: %s", cpuResult.Data.Result[0].Value[1])
 	memoryScores := memResult.Data.Result
 
 	for i := 0; i < len(memoryScores); i++ {
