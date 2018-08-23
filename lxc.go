@@ -118,3 +118,21 @@ func (l *lxc) checkIfLxcExist(db *sqlx.DB) bool {
 	}
 	return false
 }
+
+func (l *lxc) getLxcNameByID(db *sqlx.DB) string {
+	rows, err := db.Queryx("SELECT name FROM lxc WHERE id=$1", l.ID)
+	if err != nil {
+		log.Error(err.Error())
+		return ""
+	}
+	defer rows.Close()
+	lxcData := lxc{}
+	if rows.Next() {
+		if err = rows.StructScan(&lxcData); err != nil {
+			log.Error(err.Error())
+			return ""
+		}
+	}
+	log.Infof("lxc name: %s", lxcData.Name)
+	return lxcData.Name
+}

@@ -66,6 +66,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router.HandleFunc("/api/v1/lxc", s.updateLxcStatusByIDHandler).Methods("PUT")
 	s.Router.HandleFunc("/api/v1/lxc", s.deleteLxcHandler).Methods("DELETE")
 	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
+	s.Router.HandleFunc("/api/v1/lxc-services", s.createNewLxcServiceHandler).Methods("POST")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -199,6 +200,35 @@ func (s *scheduler) updateLxcStatusByIDHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]string{"message": "success updating lxc state"})
+}
+
+func (s *scheduler) createNewLxcServiceHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("-- Got new create lxc services request --")
+	newLxcService := lxcService{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&newLxcService); err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	log.Infof("LXC ID %s", newLxcService.LxcID)
+	lxc := lxc{ID: newLxcService.LxcID}
+	lxcName := lxc.getLxcNameByID(s.DB)
+
+	newLxcService.LxcName = lxcName
+	exist := newLxcService.checkIfLxcServiceExist(s.DB)
+	if !exist {
+		newLxcService.ID = uuid.New()
+
+		if err := newLxcService.insertLxcService(s.DB); err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, newLxcService)
+	} else {
+		log.Errorf("Lxc Service on %s:%s already exists", newLxcService.LxdPort, newLxcService.LxcPort)
+	}
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
