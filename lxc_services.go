@@ -10,10 +10,11 @@ type lxcService struct {
 	LxdID   string `db:"lxd_id" json:"lxd_id"`
 	LxdPort string `db:"lxd_port" json:"lxd_port"`
 	LxcName string `db:"lxc_name" json:"lxc_name"`
+	Status  string `db:"status" json:"status"`
 }
 
 func (l *lxcService) insertLxcService(db *sqlx.DB) error {
-	_, err := db.NamedExec("INSERT INTO lxc_services (id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, is_assigned) VALUES (:id, :service, :lxc_id, :lxc_port, :lxd_id, :lxc_port, :lxc_name, 0)", l)
+	_, err := db.NamedExec(`INSERT INTO lxc_services (id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status) VALUES (:id, :service, :lxc_id, :lxc_port, :lxd_id, :lxd_port, :lxc_name, 'creating')`, l)
 	if err != nil {
 		return err
 	}
@@ -32,4 +33,22 @@ func (l *lxcService) checkIfLxcServiceExist(db *sqlx.DB) bool {
 		return true
 	}
 	return false
+}
+
+func getLxcServicesList(db *sqlx.DB) ([]lxcService, error) {
+	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status FROM lxc_services")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var lxcServiceList []lxcService
+	for rows.Next() {
+		l := lxcService{}
+		if err = rows.StructScan(&l); err != nil {
+			return nil, err
+		}
+		lxcServiceList = append(lxcServiceList, l)
+	}
+
+	return lxcServiceList, nil
 }
