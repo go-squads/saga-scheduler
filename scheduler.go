@@ -227,7 +227,8 @@ func (s *scheduler) createNewLxcServiceHandler(w http.ResponseWriter, r *http.Re
 
 		respondWithJSON(w, http.StatusOK, newLxcService)
 	} else {
-		log.Errorf("Lxc Service on %s:%s already exists", newLxcService.LxdPort, newLxcService.LxcPort)
+		errMsg := fmt.Sprintf("Lxc Service: %s for lxc: %s on %s:%s already exists", newLxcService.Service, newLxcService.LxcName, newLxcService.LxdPort, newLxcService.LxcPort)
+		respondWithError(w, http.StatusBadRequest, errMsg)
 	}
 }
 
