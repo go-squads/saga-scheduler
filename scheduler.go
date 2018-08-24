@@ -67,7 +67,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router.HandleFunc("/api/v1/lxc", s.deleteLxcHandler).Methods("DELETE")
 	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
 	s.Router.HandleFunc("/api/v1/lxc-services", s.createNewLxcServiceHandler).Methods("POST")
-	s.Router.HandleFunc("/api/v1/lxc-services", s.getLxcServicesListHandler).Methods("GET")
+	s.Router.HandleFunc("/api/v1/lxc-services/{lxdName}", s.getLxcServicesListHandler).Methods("GET")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -238,7 +238,9 @@ func (s *scheduler) createNewLxcServiceHandler(w http.ResponseWriter, r *http.Re
 
 func (s *scheduler) getLxcServicesListHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info("==> Received Request for Lxc Services List <==")
-	lxcServicesList, err := getLxcServicesList(s.DB)
+	vars := mux.Vars(r)
+	lxdName := vars["lxdName"]
+	lxcServicesList, err := getLxcServicesList(s.DB, lxdName)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return

@@ -36,8 +36,8 @@ func (l *lxcService) checkIfLxcServiceExist(db *sqlx.DB) bool {
 	return false
 }
 
-func getLxcServicesList(db *sqlx.DB) ([]lxcService, error) {
-	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status FROM lxc_services")
+func getLxcServicesList(db *sqlx.DB, lxdName string) ([]lxcService, error) {
+	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status FROM lxc_services WHERE lxd_name=$1", lxdName)
 	if err != nil {
 		return nil, err
 	}
