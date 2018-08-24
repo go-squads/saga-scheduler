@@ -142,7 +142,8 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 
 		respondWithJSON(w, http.StatusOK, newLxc)
 	} else {
-		log.Errorf("Lxc with name %s already exists", newLxc.Name)
+		errStr := fmt.Sprintf("Lxc with name %s already exists", newLxc.Name)
+		respondWithError(w, http.StatusBadRequest, errStr)
 	}
 }
 
