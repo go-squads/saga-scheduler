@@ -214,9 +214,12 @@ func (s *scheduler) createNewLxcServiceHandler(w http.ResponseWriter, r *http.Re
 
 	log.Infof("LXC ID %s", newLxcService.LxcID)
 	lxc := lxc{ID: newLxcService.LxcID}
+	lxd := lxd{ID: newLxcService.LxdID}
 	lxcName := lxc.getLxcNameByID(s.DB)
+	lxdName := lxd.getLxdNameByID(s.DB)
 
 	newLxcService.LxcName = lxcName
+	newLxcService.LxdName = lxdName
 	exist := newLxcService.checkIfLxcServiceExist(s.DB)
 	if !exist {
 		newLxcService.ID = uuid.New()

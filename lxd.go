@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/jmoiron/sqlx"
+	log "github.com/sirupsen/logrus"
 )
 
 type lxd struct {
@@ -83,4 +84,22 @@ func (l *lxd) getLxdIDByName(db *sqlx.DB) error {
 		}
 	}
 	return nil
+}
+
+func (l *lxd) getLxdNameByID(db *sqlx.DB) string {
+	rows, err := db.Queryx("SELECT name FROM lxd WHERE id=$1", l.ID)
+	if err != nil {
+		log.Error(err.Error())
+		return ""
+	}
+	defer rows.Close()
+	lxdData := lxd{}
+	if rows.Next() {
+		if err = rows.StructScan(&lxdData); err != nil {
+			log.Error(err.Error())
+			return ""
+		}
+	}
+	log.Infof("lxd name: %s", lxdData.Name)
+	return lxdData.Name
 }

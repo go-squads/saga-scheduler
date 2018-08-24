@@ -11,10 +11,11 @@ type lxcService struct {
 	LxdPort string `db:"lxd_port" json:"lxd_port"`
 	LxcName string `db:"lxc_name" json:"lxc_name"`
 	Status  string `db:"status" json:"status"`
+	LxdName string `db:"lxd_name" json:"lxd_name"`
 }
 
 func (l *lxcService) insertLxcService(db *sqlx.DB) error {
-	_, err := db.NamedExec(`INSERT INTO lxc_services (id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status) VALUES (:id, :service, :lxc_id, :lxc_port, :lxd_id, :lxd_port, :lxc_name, 'creating')`, l)
+	_, err := db.NamedExec(`INSERT INTO lxc_services (id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status, lxd_name) VALUES (:id, :service, :lxc_id, :lxc_port, :lxd_id, :lxd_port, :lxc_name, 'creating', :lxd_name)`, l)
 	if err != nil {
 		return err
 	}
