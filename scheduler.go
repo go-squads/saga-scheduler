@@ -69,7 +69,7 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router.HandleFunc("/api/v1/lxc-services", s.createNewLxcServiceHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/lxc-services/{lxdName}", s.getLxcServicesListHandler).Methods("GET")
 	s.Router.HandleFunc("/api/v1/lxc-services", s.updateLxcServicesStatusByIDHandler).Methods("PUT")
-	s.Router.HandleFunc("/api/v1/lxc-service/{lxcId}", s.getLxcServiceListByLxcIDHandler).Methods("GET")
+	s.Router.HandleFunc("/api/v1/lxc-services/lxc/{lxcId}", s.getLxcServiceListByLxcIDHandler).Methods("GET")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -219,10 +219,11 @@ func (s *scheduler) createNewLxcServiceHandler(w http.ResponseWriter, r *http.Re
 	lxc := lxc{ID: newLxcService.LxcID}
 	lxd := lxd{ID: newLxcService.LxdID}
 	lxcName := lxc.getLxcNameByID(s.DB)
-	lxdName := lxd.getLxdNameByID(s.DB)
+	lxdAddress, lxdName := lxd.getLxdNameAndAddressByID(s.DB)
 
 	newLxcService.LxcName = lxcName
 	newLxcService.LxdName = lxdName
+	newLxcService.LxdAddress = lxdAddress
 	exist := newLxcService.checkIfLxcServiceExist(s.DB)
 	if !exist {
 		newLxcService.ID = uuid.New()

@@ -122,7 +122,10 @@ func calculateMetrics(memResult, cpuResult, storageResult promResponse, scoringW
 	memoryScores := memResult.Data.Result
 	cpuScores := cpuResult.Data.Result
 
+	log.Infof("array length: %d", len(memoryScores))
 	for i := 0; i < len(memoryScores); i++ {
+		log.Infof("memoryScore arr: %s for i: %d", memoryScores[i], i)
+		log.Infof("cpuScore arr: %s for i: %d", cpuScores[i], i)
 		address := memoryScores[i].Metric.Instance
 		strMemScore := memoryScores[i].Value[1].(string)
 		strCpuScore := cpuScores[i].Value[1].(string)
