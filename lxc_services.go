@@ -102,7 +102,7 @@ func (l *lxcService) updateStatusByID(db *sqlx.DB) error {
 }
 
 func (l *lxcService) getLxcServicesListByLxcID(db *sqlx.DB) ([]lxcService, error) {
-	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status, lxd_address FROM lxc_services WHERE lxc_id=$1", l.LxcID)
+	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status, lxd_name, lxd_address FROM lxc_services WHERE lxc_id=$1", l.LxcID)
 	if err != nil {
 		return nil, err
 	}

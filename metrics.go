@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -55,7 +56,7 @@ type metricsDB interface {
 type prometheusMetricsDB struct{}
 
 func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) {
-	prometheusAddress := "172.28.128.5"
+	prometheusAddress := os.Getenv("PROMETHEUS_ADDRESS")
 	url := fmt.Sprintf("http://%s:9090/api/v1/query", prometheusAddress)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -108,7 +109,7 @@ func (p prometheusMetricsDB) getLowestLoadLxdInstance(weight string, weightValue
 }
 
 func (p prometheusMetricsDB) getFreeMemory() (*promResponse, error) {
-	return p.callMetricAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[24h]) + avg_over_time(node_memory_Cached_bytes[24h]) + avg_over_time(node_memory_Buffers_bytes[24h])) / avg_over_time(node_memory_MemTotal_bytes[24h])))")
+	return p.callMetricAPI("100 * (((avg_over_time(node_memory_MemFree_bytes[1h]) + avg_over_time(node_memory_Cached_bytes[1h]) + avg_over_time(node_memory_Buffers_bytes[1h])) / avg_over_time(node_memory_MemTotal_bytes[1h])))")
 }
 
 func (p prometheusMetricsDB) getCpuUsage() (*promResponse, error) {
@@ -124,8 +125,6 @@ func calculateMetrics(memResult, cpuResult, storageResult promResponse, scoringW
 
 	log.Infof("array length: %d", len(memoryScores))
 	for i := 0; i < len(memoryScores); i++ {
-		log.Infof("memoryScore arr: %s for i: %d", memoryScores[i], i)
-		log.Infof("cpuScore arr: %s for i: %d", cpuScores[i], i)
 		address := memoryScores[i].Metric.Instance
 		strMemScore := memoryScores[i].Value[1].(string)
 		strCpuScore := cpuScores[i].Value[1].(string)
