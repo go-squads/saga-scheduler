@@ -68,7 +68,8 @@ func (s *scheduler) initialize(user, password, dbname, host, port, sslmode strin
 	s.Router.HandleFunc("/api/v1/lxd/{lxdName}/lxc", s.getLxcListByLxdNameHandler).Methods("GET")
 	s.Router.HandleFunc("/api/v1/lxc-services", s.createNewLxcServiceHandler).Methods("POST")
 	s.Router.HandleFunc("/api/v1/lxc-services/{lxdName}", s.getLxcServicesListHandler).Methods("GET")
-	s.Router.HandleFunc("/api/v1/lxc-service", s.updateLxcServicesStatusByIDHandler).Methods("PUT")
+	s.Router.HandleFunc("/api/v1/lxc-services", s.updateLxcServicesStatusByIDHandler).Methods("PUT")
+	s.Router.HandleFunc("/api/v1/lxc-service/{lxcId}", s.getLxcServiceListByLxcIDHandler).Methods("GET")
 	s.client = agentClient{}
 	s.metricsDB = prometheusMetricsDB{}
 
@@ -242,7 +243,7 @@ func (s *scheduler) getLxcServicesListHandler(w http.ResponseWriter, r *http.Req
 	log.Info("==> Received Request for Lxc Services List <==")
 	vars := mux.Vars(r)
 	lxdName := vars["lxdName"]
-	lxcServicesList, err := getLxcServicesList(s.DB, lxdName)
+	lxcServicesList, err := getLxcServicesListByLxdName(s.DB, lxdName)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -263,6 +264,19 @@ func (s *scheduler) updateLxcServicesStatusByIDHandler(w http.ResponseWriter, r 
 	}
 
 	respondWithJSON(w, http.StatusOK, map[string]string{"message": "success updating lxc service status"})
+}
+
+func (s *scheduler) getLxcServiceListByLxcIDHandler(w http.ResponseWriter, r *http.Request) {
+	log.Info("Get lxc services list by lxc id request")
+	vars := mux.Vars(r)
+	lxcId := vars["lxcId"]
+	l := lxcService{LxcID: lxcId}
+	lxcServicesList, err := l.getLxcServicesListByLxcID(s.DB)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	respondWithJSON(w, http.StatusOK, lxcServicesList)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
