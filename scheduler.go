@@ -83,6 +83,7 @@ func (s *scheduler) run(port string) {
 func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) {
 	type resp struct {
 		ID      string `json:"id" db:"id"`
+		LXDID   string `json:"lxd_id" db:"lxd_id"`
 		LXDName string `json:"lxd_name" db:"lxd_name"`
 		LXCName string `json:"lxc_name" db:"lxc_name"`
 		Image   string `json:"image" db:"image"`
@@ -90,7 +91,7 @@ func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var result []resp
-	rows, err := s.DB.Queryx(`SELECT c.id as "id", c.name as "lxc_name", d.name as "lxd_name", c.alias as "image", c.status as "status" FROM lxc c JOIN lxd d ON c.lxd_id = d.id`)
+	rows, err := s.DB.Queryx(`SELECT c.id as "id", c.name as "lxc_name", d.id as "lxd_id", d.name as "lxd_name", c.alias as "image", c.status as "status" FROM lxc c JOIN lxd d ON c.lxd_id = d.id`)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
