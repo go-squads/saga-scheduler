@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -49,14 +48,14 @@ type scoringWeight struct {
 
 type metricsDB interface {
 	callMetricAPI(query string) (*promResponse, error)
-	getLowestLoadLxdInstance(string, float64) (*lxd, error)
+	getLowestLoadLxdInstance(string, float64, PostgresQL) (*lxd, error)
 	getFreeMemory() (*promResponse, error)
 }
 
 type prometheusMetricsDB struct{}
 
 func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) {
-	prometheusAddress := os.Getenv("PROMETHEUS_ADDRESS")
+	prometheusAddress := "172.28.128.5"
 	url := fmt.Sprintf("http://%s:9090/api/v1/query", prometheusAddress)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -88,7 +87,7 @@ func (p prometheusMetricsDB) callMetricAPI(query string) (*promResponse, error) 
 	return &result, nil
 }
 
-func (p prometheusMetricsDB) getLowestLoadLxdInstance(weight string, weightValue float64) (*lxd, error) {
+func (p prometheusMetricsDB) getLowestLoadLxdInstance(weight string, weightValue float64, db PostgresQL) (*lxd, error) {
 	scoreWeight := setWeightValues(weight, weightValue)
 	freeMemory, err := p.getFreeMemory()
 	if err != nil {
@@ -100,7 +99,20 @@ func (p prometheusMetricsDB) getLowestLoadLxdInstance(weight string, weightValue
 		return nil, err
 	}
 
-	lowestLoadLxdIPAddress := calculateMetrics(*freeMemory, *freeCpu, promResponse{}, scoreWeight)
+	lxds, err := getLxds(db)
+	if err != nil {
+		return nil, err
+	}
+
+	validIPList := make(map[string]int)
+	for i := 0; i < len(lxds); i++ {
+		ip, _ := lxds[i].getLxdNameAndAddressByID(db)
+		log.Infof("ip obtained: %s", ip)
+		validIPList[ip] = i
+	}
+	log.Infof("Valid IP LIST: %s", validIPList)
+
+	lowestLoadLxdIPAddress := calculateMetrics(*freeMemory, *freeCpu, promResponse{}, scoreWeight, validIPList)
 	lxdInstance := lxd{
 		Address: lowestLoadLxdIPAddress,
 	}
@@ -116,18 +128,56 @@ func (p prometheusMetricsDB) getCpuUsage() (*promResponse, error) {
 	return p.callMetricAPI(`(avg by (instance) (irate(node_cpu_seconds_total{job="prometheus",mode="idle"}[1h])) * 100)`)
 }
 
+// use getLxds and getLxdByIP later
+func getValidIPArrayIndexes(queryResult []result, validIPList map[string]int) []int {
+	log.Info("Hello")
+	var ipListIndex []int
+
+	for i := 0; i < len(queryResult); i++ {
+		instance := queryResult[i].Metric.Instance
+		address := instance[:strings.IndexByte(instance, ':')]
+		_, exist := validIPList[address]
+		if exist {
+			ipListIndex = append(ipListIndex, i)
+		}
+	}
+
+	log.Info("Bye")
+	return ipListIndex
+}
+
+func getValidIPArrayIndexesForMemory(queryResult []result, ipIndex []int, job string) []int {
+	var validIPList []int
+
+	for i := 0; i < len(ipIndex); i++ {
+		index := ipIndex[i]
+		if queryResult[index].Metric.Job == job {
+			validIPList = append(validIPList, index)
+		}
+	}
+	return validIPList
+}
+
 // Insert in the payload
-func calculateMetrics(memResult, cpuResult, storageResult promResponse, scoringWeight scoringWeight) string {
+func calculateMetrics(memResult, cpuResult, storageResult promResponse, scoringWeight scoringWeight, validIPList map[string]int) string {
 	var scores []scoring
 
 	memoryScores := memResult.Data.Result
 	cpuScores := cpuResult.Data.Result
 
-	log.Infof("array length: %d", len(memoryScores))
-	for i := 0; i < len(memoryScores); i++ {
-		address := memoryScores[i].Metric.Instance
-		strMemScore := memoryScores[i].Value[1].(string)
-		strCpuScore := cpuScores[i].Value[1].(string)
+	//validiplist for memory
+	cpuScoreIndexList := getValidIPArrayIndexes(cpuScores, validIPList)
+	memScoreList := getValidIPArrayIndexes(memoryScores, validIPList)
+	memScoreIndexList := getValidIPArrayIndexesForMemory(memoryScores, memScoreList, "prometheus")
+	log.Infof("cpu length: %d", len(cpuScoreIndexList))
+	log.Infof("mem lenght: %d", len(memScoreIndexList))
+
+	for i := 0; i < len(cpuScoreIndexList); i++ {
+		log.Infof("cpuIndex: %d", cpuScoreIndexList[i])
+		log.Infof("memScore: %d", memScoreIndexList[i])
+		address := cpuScores[cpuScoreIndexList[i]].Metric.Instance
+		strMemScore := memoryScores[memScoreIndexList[i]].Value[1].(string)
+		strCpuScore := cpuScores[cpuScoreIndexList[i]].Value[1].(string)
 		memScore := convertAndCalcNewScoreWeight(strMemScore, scoringWeight.memScore)
 		cpuScore := convertAndCalcNewScoreWeight(strCpuScore, scoringWeight.cpuScore)
 		log.Infof("Previous Free CPU for %s : %v", address, strCpuScore)

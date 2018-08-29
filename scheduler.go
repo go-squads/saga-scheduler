@@ -128,7 +128,7 @@ func (s *scheduler) createNewLxcHandler(w http.ResponseWriter, r *http.Request) 
 
 	exist := newLxc.checkIfLxcExist(s.DB)
 	if !exist {
-		lxdInstance, err := s.metricsDB.getLowestLoadLxdInstance(newLxc.WeightScore, newLxc.WeightValue)
+		lxdInstance, err := s.metricsDB.getLowestLoadLxdInstance(newLxc.WeightScore, newLxc.WeightValue, s.DB)
 		if err != nil {
 			respondWithError(w, http.StatusBadRequest, err.Error())
 			return
