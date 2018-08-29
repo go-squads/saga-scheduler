@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,7 +19,7 @@ type lxc struct {
 	WeightValue float64 `json:"weightValue"`
 }
 
-func (l *lxc) getLxc(db *sqlx.DB) error {
+func (l *lxc) getLxc(db PostgresQL) error {
 	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, address, description, status FROM lxc WHERE id=$1 LIMIT 1", l.ID)
 	if err != nil {
 		return err
@@ -53,7 +52,7 @@ func (l *lxc) checkNeedUpdate(curLxc lxc) bool {
 	return true
 }
 
-func (l *lxc) updateStatusByID(db *sqlx.DB) error {
+func (l *lxc) updateStatusByID(db PostgresQL) error {
 	curLxc := lxc{ID: l.ID}
 	if err := curLxc.getLxc(db); err != nil {
 		return err
@@ -68,7 +67,7 @@ func (l *lxc) updateStatusByID(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxc) insertLxc(db *sqlx.DB) error {
+func (l *lxc) insertLxc(db PostgresQL) error {
 	_, err := db.NamedExec("INSERT INTO lxc (id, lxd_id, name, type, alias, protocol, server, address, description, status) VALUES (:id, :lxd_id, :name, :type, :alias, :protocol, :server, :address, :description, :status)", l)
 	if err != nil {
 		return err
@@ -77,7 +76,7 @@ func (l *lxc) insertLxc(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxc) deleteLxc(db *sqlx.DB) error {
+func (l *lxc) deleteLxc(db PostgresQL) error {
 	_, err := db.Queryx("DELETE FROM lxc WHERE id = $1", l.ID)
 	if err != nil {
 		return err
@@ -85,7 +84,7 @@ func (l *lxc) deleteLxc(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxc) getLxcListByLxdID(db *sqlx.DB, lxdID string) ([]lxc, error) {
+func (l *lxc) getLxcListByLxdID(db PostgresQL, lxdID string) ([]lxc, error) {
 	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, protocol, server, address, description, status FROM lxc WHERE lxd_id=$1", lxdID)
 	if err != nil {
 		return nil, err
@@ -106,7 +105,7 @@ func (l *lxc) getLxcListByLxdID(db *sqlx.DB, lxdID string) ([]lxc, error) {
 	return lxcList, nil
 }
 
-func (l *lxc) checkIfLxcExist(db *sqlx.DB) bool {
+func (l *lxc) checkIfLxcExist(db PostgresQL) bool {
 	rows, err := db.Queryx("SELECT id, lxd_id, name, type, alias, protocol, server, address, description, status FROM lxc WHERE name=$1", l.Name)
 	if err != nil {
 		return false
@@ -119,7 +118,7 @@ func (l *lxc) checkIfLxcExist(db *sqlx.DB) bool {
 	return false
 }
 
-func (l *lxc) getLxcNameByID(db *sqlx.DB) string {
+func (l *lxc) getLxcNameByID(db PostgresQL) string {
 	rows, err := db.Queryx("SELECT name FROM lxc WHERE id=$1", l.ID)
 	if err != nil {
 		log.Error(err.Error())

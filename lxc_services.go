@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,7 +17,7 @@ type lxcService struct {
 	LxdAddress string `db:"lxd_address" json:"lxd_address"`
 }
 
-func (l *lxcService) insertLxcService(db *sqlx.DB) error {
+func (l *lxcService) insertLxcService(db PostgresQL) error {
 	_, err := db.NamedExec(`INSERT INTO lxc_services (id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status, lxd_name, lxd_address) VALUES (:id, :service, :lxc_id, :lxc_port, :lxd_id, :lxd_port, :lxc_name, 'creating', :lxd_name, :lxd_address)`, l)
 	if err != nil {
 		return err
@@ -27,7 +26,7 @@ func (l *lxcService) insertLxcService(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxcService) checkIfLxcServiceExist(db *sqlx.DB) bool {
+func (l *lxcService) checkIfLxcServiceExist(db PostgresQL) bool {
 	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port FROM lxc_services WHERE lxc_port=$1 AND lxd_port=$2", l.LxcPort, l.LxdPort)
 	if err != nil {
 		return false
@@ -40,7 +39,7 @@ func (l *lxcService) checkIfLxcServiceExist(db *sqlx.DB) bool {
 	return false
 }
 
-func getLxcServicesListByLxdName(db *sqlx.DB, lxdName string) ([]lxcService, error) {
+func getLxcServicesListByLxdName(db PostgresQL, lxdName string) ([]lxcService, error) {
 	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status, lxd_address FROM lxc_services WHERE lxd_name=$1", lxdName)
 	if err != nil {
 		return nil, err
@@ -58,7 +57,7 @@ func getLxcServicesListByLxdName(db *sqlx.DB, lxdName string) ([]lxcService, err
 	return lxcServiceList, nil
 }
 
-func (l *lxcService) getLxcService(db *sqlx.DB) error {
+func (l *lxcService) getLxcService(db PostgresQL) error {
 	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status, lxd_address FROM lxc_services WHERE id=$1", l.ID)
 	if err != nil {
 		return err
@@ -86,7 +85,7 @@ func (l *lxcService) checkNeedUpdateLxcService(curLxc lxcService) bool {
 	return true
 }
 
-func (l *lxcService) updateStatusByID(db *sqlx.DB) error {
+func (l *lxcService) updateStatusByID(db PostgresQL) error {
 	curLxc := lxcService{ID: l.ID}
 	if err := curLxc.getLxcService(db); err != nil {
 		return err
@@ -101,7 +100,7 @@ func (l *lxcService) updateStatusByID(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxcService) getLxcServicesListByLxcID(db *sqlx.DB) ([]lxcService, error) {
+func (l *lxcService) getLxcServicesListByLxcID(db PostgresQL) ([]lxcService, error) {
 	rows, err := db.Queryx("SELECT id, service, lxc_id, lxc_port, lxd_id, lxd_port, lxc_name, status, lxd_name, lxd_address FROM lxc_services WHERE lxc_id=$1", l.LxcID)
 	if err != nil {
 		return nil, err

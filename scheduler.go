@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -16,9 +17,15 @@ import (
 
 type scheduler struct {
 	Router    *mux.Router
-	DB        *sqlx.DB
+	DB        PostgresQL
 	client    client
 	metricsDB metricsDB
+}
+
+type PostgresQL interface {
+	Queryx(query string, args ...interface{}) (*sqlx.Rows, error)
+	NamedExec(query string, arg interface{}) (sql.Result, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
 type client interface {
@@ -83,7 +90,7 @@ func (s *scheduler) run(port string) {
 func (s *scheduler) getContainerHandler(w http.ResponseWriter, r *http.Request) {
 	type resp struct {
 		ID      string `json:"id" db:"id"`
-		LXDID   string `json:"lxd_id" db:"lxd_id"`
+		LxdID   string `json:"lxd_id" db:"lxd_id"`
 		LXDName string `json:"lxd_name" db:"lxd_name"`
 		LXCName string `json:"lxc_name" db:"lxc_name"`
 		Image   string `json:"image" db:"image"`

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -12,7 +11,7 @@ type lxd struct {
 	Description string `db:"description" json:"description"`
 }
 
-func (l *lxd) getLxd(db *sqlx.DB) error {
+func (l *lxd) getLxd(db PostgresQL) error {
 	rows, err := db.Queryx("SELECT id, name, address, description FROM lxd WHERE id=$1 LIMIT 1", l.ID)
 	if err != nil {
 		return err
@@ -27,7 +26,7 @@ func (l *lxd) getLxd(db *sqlx.DB) error {
 	return nil
 }
 
-func getLxds(db *sqlx.DB) ([]lxd, error) {
+func getLxds(db PostgresQL) ([]lxd, error) {
 	var result []lxd
 	rows, err := db.Queryx("SELECT id, name, address, description FROM lxd")
 	if err != nil {
@@ -45,7 +44,7 @@ func getLxds(db *sqlx.DB) ([]lxd, error) {
 	return result, nil
 }
 
-func (l *lxd) getLxdByIP(db *sqlx.DB) error {
+func (l *lxd) getLxdByIP(db PostgresQL) error {
 	rows, err := db.Queryx("SELECT id, address FROM lxd WHERE address=$1 LIMIT 1", l.Address)
 	if err != nil {
 		return err
@@ -60,7 +59,7 @@ func (l *lxd) getLxdByIP(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxd) insertLxd(db *sqlx.DB) error {
+func (l *lxd) insertLxd(db PostgresQL) error {
 	_, err := db.NamedExec("INSERT INTO lxd (id, name, address, description) VALUES (:id, :name, :address, :description)", l)
 	if err != nil {
 		return err
@@ -69,7 +68,7 @@ func (l *lxd) insertLxd(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxd) getLxdIDByName(db *sqlx.DB) error {
+func (l *lxd) getLxdIDByName(db PostgresQL) error {
 	rows, err := db.Queryx("SELECT id, name, address, description FROM lxd WHERE name = $1", l.Name)
 	if err != nil {
 		return err
@@ -86,7 +85,7 @@ func (l *lxd) getLxdIDByName(db *sqlx.DB) error {
 	return nil
 }
 
-func (l *lxd) getLxdNameAndAddressByID(db *sqlx.DB) (string, string) {
+func (l *lxd) getLxdNameAndAddressByID(db PostgresQL) (string, string) {
 	rows, err := db.Queryx("SELECT name, address FROM lxd WHERE id=$1", l.ID)
 	if err != nil {
 		log.Error(err.Error())
