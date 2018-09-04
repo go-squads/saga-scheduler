@@ -1,0 +1,18 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.define "metric-collector" do |vm2|
+    vm2.vm.hostname = "metric-collector"
+    vm2.vm.box = "ubuntu/xenial64"
+
+    vm2.vm.network "private_network". type: "dhcp"
+
+    config.vm.network :forwarded_port, host: 5432, guest: 9300
+    vm2.vm.provider "virtualbox" do |vb|
+      vb.name = "metric-collector"
+      vb.gui = false
+      vb.memory = "1024"
+    end
+  end
+end
