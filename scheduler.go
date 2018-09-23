@@ -60,7 +60,7 @@ func (a agentClient) executeOperationRequest(req *http.Request) (*operation, err
 }
 
 func (s *scheduler) initialize(user, password, dbname, host, port, sslmode string) error {
-	connectionString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=%s", user, password, dbname, host, port, sslmode)
+	connectionString := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s", user, password, dbname, host, port)
 	var err error
 	s.DB, err = sqlx.Connect("postgres", connectionString)
 	if err != nil {
